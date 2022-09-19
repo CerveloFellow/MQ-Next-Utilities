@@ -1,3 +1,27 @@
+--[[
+    LootSettingsUtil.lua
+
+    This script provides some utilities to get and set values from the Loot Settings.ini table
+
+    *** Note ***
+    I've come across two different algorithms for writing entries to the Loot Settings.ini file. As such, when calls are made to getItemValue, a table is returned with both values so that a lookup for all 
+    values can be done.
+
+    Algorithm 1:
+        Returns #p#g#s#g and and will omit zero values.  
+        Examples: 
+            321 will return 3g2s1c
+            301 will return 3g1c
+            7654321 will return 7654p3g2s1c
+    
+    Algorithm 12
+        Returns only the highest non-zero coin amount
+        Examples: 
+            321 will return 3g
+            301 will return 3g
+            7654321 will return 7654p
+    
+]]--
 local mq = require('mq')
 
 LootSettingUtil = { }
