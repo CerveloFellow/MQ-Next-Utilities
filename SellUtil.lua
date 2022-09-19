@@ -26,8 +26,8 @@
     /asell - Auto Sell.  This will find the nearest merchant, run up to them and sell any items in your inventory that are tagged Keep,Sell.
     /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
     /pinv - Mostly used for my debug purposes.  Prints the contents of the LUA table where inventory information is held.
-    /adrop loops through your autodrop list and drops all items in your inventory that have been flagged with /xitem 
-
+    /adrop loops through your autodrop list and drops all items in your inventory that have been flagged with /xitem.  AutoDrop is temporary and does not persist in Loot Settings.ini
+    /dropclear - removes all items from your drop array
     These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
     work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling
 
@@ -71,10 +71,19 @@ function SellUtil.new()
         end
     end
 
+    function self.dropClear()
+        self.dropArray = {}
+    end
+
     function self.dropThisItem()
-        if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
-            self.dropArray[mq.TLO.Cursor.ID()] = mq.TLO.Cursor.Name()
-            print(mq.TLO.Cursor.Name().." has been added to your Drop Array")
+        local item = mq.TLO.Cursor
+        if (not (item.ID() == nil)) and (item.ID() > 0) then
+            if(item.NoTrade() or item.NoDrop() or item.NoDestroy()) then
+                print(item.Name(), " is No Drop, No Trade, or No Destroy and cannot be dropped.")
+            else
+                self.dropArray[mq.TLO.Cursor.ID()] = mq.TLO.Cursor.Name()
+                print(item.Name().." has been added to your Drop Array")
+            end
         else
             print("No item is on your cursor.")
         end
@@ -129,7 +138,6 @@ function SellUtil.new()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
                         self.inventoryArray[currentItem.Name()] = lookup
-                        --self.inventoryArray[currentItem.ID()] = lookup
                     end
                 end
             else
@@ -140,7 +148,6 @@ function SellUtil.new()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
                     self.inventoryArray[currentItem.Name()] = lookup
-                    --self.inventoryArray[currentItem.ID()] = lookup
                 end
             end
         end
@@ -394,6 +401,7 @@ mq.bind("/scaninv", instance.scanInventory)
 mq.bind("/pinv", instance.printInventory)
 mq.bind("/dinv", instance.printDrop)
 mq.bind("/adrop", instance.autoDrop)
+mq.bind("/dropclear", instance.dropClear)
 mq.event('event_soldItem', 'You receive #*# from #1# for the #2#(s).', instance.itemSold)
 
 while(loopBoolean)
