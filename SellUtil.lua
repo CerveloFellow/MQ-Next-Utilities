@@ -29,7 +29,7 @@
     /adrop loops through your autodrop list and drops all items in your inventory that have been flagged with /xitem 
 
     These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
-    work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling/banking
+    work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling
 
     self.COMMANDDELAY = 50
     self.SELLDELAY = 300
@@ -60,23 +60,20 @@ function SellUtil.new()
     self.DESTROYDELAY = 100
 
     function self.printInventory()
-        for i=1,#self.inventoryArray do
-            local value1 = self.inventoryArray[i].key.."---"..self.inventoryArray[i].location.."---"..self.inventoryArray[i].value[1]
-            local value2 = self.inventoryArray[i].key.."---"..self.inventoryArray[i].location.."---"..self.inventoryArray[i].value[2]
+
+        for k,v in pairs(self.inventoryArray) do
+            local value1 = k.."---"..v.location.."---"..v.value[1]
+            local value2 = k.."---"..v.location.."---"..v.value[2]
             print(value1)
             if(value1 ~= value2) then
                 print(value2)
             end
         end
-        print(string.format("%d items in your inventory", #self.inventoryArray))
     end
 
     function self.dropThisItem()
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
-            local tbl = {}
-            tbl.ID = mq.TLO.Cursor.ID()
-            tbl.Name = mq.TLO.Cursor.Name()
-            table.insert(self.dropArray, tbl)
+            self.dropArray[mq.TLO.Cursor.ID()] = mq.TLO.Cursor.Name()
             print(mq.TLO.Cursor.Name().." has been added to your Drop Array")
         else
             print("No item is on your cursor.")
@@ -84,30 +81,28 @@ function SellUtil.new()
     end
 
     function self.printDrop()
-        for i=1,#self.dropArray do
-            local dropItem = self.dropArray[i]
-            print(dropItem.ID)
+        for k,v in pairs(self.dropArray) do
+            print("ID=",k," Name=",v)
         end
-        print(string.format("%d items in your dropArray", #self.dropArray))
     end
 
     function self.autoDrop()
         local clickAttempts = 0
         local maxClickAttempts = 8
-        for i=1, #self.inventoryArray do
-            for x=1, #self.dropArray do
-                if self.inventoryArray[i].ID == self.dropArray[x].ID then
-                    print("Match found!")
-                    mq.cmdf("/itemnotify %s leftmouseup", self.inventoryArray[i].location)
-                    mq.delay(100)
-                    while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
-                        clickAttempts = clickAttempts + 1
-                        mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
-                        mq.delay(self.COMMANDDELAY)
-                    end
-                    mq.cmdf("/drop")
-                    break
+        self.scanInventory()
+
+        for k,v in pairs(self.inventoryArray) do
+            local id = self.dropArray[v.ID]
+
+            if(self.dropArray[v.ID]) then
+                mq.cmdf("/itemnotify %s leftmouseup", v.location)
+                mq.delay(100)
+                while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
+                    clickAttempts = clickAttempts + 1
+                    mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
+                    mq.delay(self.COMMANDDELAY)
                 end
+                mq.cmdf("/drop")  
             end
         end
     end
@@ -133,7 +128,8 @@ function SellUtil.new()
                         lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
-                        table.insert(self.inventoryArray, lookup)
+                        self.inventoryArray[currentItem.Name()] = lookup
+                        --self.inventoryArray[currentItem.ID()] = lookup
                     end
                 end
             else
@@ -143,7 +139,8 @@ function SellUtil.new()
                     lookup.key = currentItem.Name()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
-                    table.insert(self.inventoryArray, lookup)
+                    self.inventoryArray[currentItem.Name()] = lookup
+                    --self.inventoryArray[currentItem.ID()] = lookup
                 end
             end
         end
@@ -218,26 +215,18 @@ function SellUtil.new()
         end
     end
 
-    function findIniEntry(itemName)
-        for i=1, #self.inventoryArray do
-            if(self.inventoryArray[i].key == itemName) then
-                return self.inventoryArray[i].value
-            end 
-        end
-    end 
-
     function self.syncInventory()
         local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
 
         self.scanInventory()
         print("Sync Inventory Starting")
-        for i=1, #self.inventoryArray do
-            local lootSetting = lsu.getIniValue(self.inventoryArray[i].value[1])
+        for k,v in pairs(self.inventoryArray) do
+            local lootSetting = lsu.getIniValue(v.value[1])
 
             if(lootSetting == nil) then
                 --add this item to the Loot Settings.ini
-                lsu.setIniValue(self.inventoryArray[i].value[1], self.KEEP)
-                print(string.format("Added: %s", self.inventoryArray[i].key))
+                lsu.setIniValue(v.value[1], self.KEEP)
+                print(string.format("Added: %s", v.key))
             end
         end
         print("Sync Inventory Complete")
@@ -245,7 +234,7 @@ function SellUtil.new()
 
     function self.itemSold(line, merchantName, itemName)
         local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
-        local lootIniKey = findIniEntry(itemName)
+        local lootIniKey = self.inventoryArray[itemName].value
         lsu.setIniValue(lootIniKey[1], self.SELL)
         print(itemName, " has been set to ", self.SELL)
     end
@@ -350,16 +339,16 @@ function SellUtil.new()
             return
         end
 
-        for i=1, #self.inventoryArray do
-            for j=1,#self.inventoryArray[i].value do
-            local lootSetting = lsu.getIniValue(self.inventoryArray[i].value[j]) or "Nothing"
+        for k1,v1 in pairs(self.inventoryArray) do
+            for k2,v2 in pairs(v1.value) do
+                local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.SELL)) then
                     if mq.TLO.Window("MerchantWnd").Open() then
-                        print("Selling: ",self.inventoryArray[i].key," - ",self.inventoryArray[i].location)
-                        sellSingleItem(self.inventoryArray[i].location,3)
+                        print("Selling: ",v1.key," - ",v1.location)
+                        sellSingleItem(v1.location,3)
                         mq.delay(self.SELLDELAY)
+                        break
                     end
-                    break
                 end
             end
         end
@@ -367,15 +356,15 @@ function SellUtil.new()
         closeMerchant()
         self.scanInventory()
 
-        for i=1, #self.inventoryArray do
-            for j=1,#self.inventoryArray[i].value do
-            local lootSetting = lsu.getIniValue(self.inventoryArray[i].value[j]) or "Nothing"
+        for k1,v1 in pairs(self.inventoryArray) do
+            for k2, v2 in pairs(v1.value) do
+                local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.DESTROY)) then
-                    print("Destroying: ",self.inventoryArray[i].key," - ",self.inventoryArray[i].location)
-                    destroySingleItem(self.inventoryArray[i].location,3)
+                    print("Destroying: ",v1.key," - ",v1.location)
+                    destroySingleItem(v1.location,3)
                     mq.delay(self.DESTROYDELAY)
+                    break
                 end
-                break
             end
         end
 
