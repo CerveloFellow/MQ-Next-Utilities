@@ -20,7 +20,6 @@
     /ditem - Destroy Item.  Set's the item on your cursor to Destroy in the Loot Settings.ini.
     /syncbank - Sync Bank.  Sync's your bank and marks everything in the bank for Keep,Bank in Loot Settings.ini.
     /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
-    /pinv - Mostly used for my debug purposes.  Prints the contents of the LUA table where inventory information is held.
     /abank - Auto Bank - when running this command near a banker, it will open the bank window and auto bank any items in your inventory that are flagged for Keep,Bank
 
         These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
@@ -54,14 +53,14 @@ function BankUtil.new()
     self.BANKDELAY = 300
 
     function self.printBank()
-        for i=1,#self.bankArray do
-            local value1 = self.bankArray[i].key.."---"..self.bankArray[i].value[1]
-            local value2 = self.bankArray[i].key.."---"..self.bankArray[i].value[2]
-            print(value1)
-            if(value1 ~= value2) then
-                print(value2)
+        local lastBankItem = ""
+        for k1,v1 in pairs(self.bankArray) do
+            for k2,v2 in pairs(v1.value) do
+                if(v2 ~= lastBankItem) then
+                    print(v2)
+                end
+                lastBankItem = v2
             end
-
         end
 
         print(string.format("%d items in your bank", #self.bankArray))
@@ -98,8 +97,9 @@ function BankUtil.new()
                         local currentItem = mq.TLO.Me.Bank(i).Item(x)
                         local lookup = {}
                         lookup.key = currentItem.Name()
+                        lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
-                        table.insert(self.bankArray, lookup)
+                        self.bankArray[currentItem.Name()] = lookup
                     end
                 end
             else
@@ -107,8 +107,9 @@ function BankUtil.new()
                     local currentItem = mq.TLO.Me.Bank(i)
                     local lookup = {}
                     lookup.key = currentItem.Name()
+                    lookup.ID = currentItem.ID()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
-                    table.insert(self.bankArray, lookup)
+                    self.bankArray[currentItem.Name()] = lookup
                 end
             end
         end
@@ -125,9 +126,10 @@ function BankUtil.new()
                         local currentItem = mq.TLO.Me.Inventory(i+22).Item(x)
                         local lookup = {}
                         lookup.key = currentItem.Name()
+                        lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
-                        table.insert(self.inventoryArray, lookup)
+                        self.inventoryArray[currentItem.Name()] = lookup
                     end
                 end
             else
@@ -135,9 +137,10 @@ function BankUtil.new()
                     local currentItem = mq.TLO.Me.Inventory(i+22)
                     local lookup = {}
                     lookup.key = currentItem.Name()
+                    lookup.ID = currentItem.ID()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
-                    table.insert(self.inventoryArray, lookup)
+                    self.inventoryArray[currentItem.Name()] = lookup
                 end
             end
         end
@@ -230,23 +233,15 @@ function BankUtil.new()
         end
     end
 
-    function findIniEntry(itemName)
-        for i=1, #self.inventoryArray do
-            if(self.inventoryArray[i].key == itemName) then
-                return self.inventoryArray[i].value
-            end 
-        end
-    end 
-
     function self.syncBank()
         local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
 
         self.scanBank()
         print("Sync Bank Starting")
-        for i=1, #self.bankArray do
-            local lootSetting = lsu.getIniValue(self.bankArray[i].value[1])
-            lsu.setIniValue(self.bankArray[i].value[1], self.BANK)
-            print(string.format("Flag Bank Item: %s.", self.bankArray[i].key))
+        for k,v in pairs(bankArray) do
+            local lootSetting = lsu.getIniValue(v.value[1])
+            lsu.setIniValue(v.value[1], self.BANK)
+            print(string.format("Flag Bank Item: %s.", v.key))
         end
         print("Sync Bank Complete")
     end
@@ -330,13 +325,13 @@ function BankUtil.new()
             return
         end
 
-        for i=1, #self.inventoryArray do
-            for j=1, #self.inventoryArray[i].value do
-                local lootSetting = lsu.getIniValue(self.inventoryArray[i].value[j]) or "Nothing"
+        for k1,v1 in pairs(self.inventoryArray) do
+            for k2,v2 in pairs(v1.value) do
+                local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.BANK)) then
                     if mq.TLO.Window("BigBankWnd").Open() then
-                        print("Banking: ",self.inventoryArray[i].key," - ",self.inventoryArray[i].location)
-                        bankSingleItem(self.inventoryArray[i].location,3)
+                        print("Banking: ",v1.key," - ",v1.location)
+                        bankSingleItem(v1.location,3)
                         mq.delay(self.BANKDELAY)
                     end
                     break
