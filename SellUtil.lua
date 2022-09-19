@@ -3,6 +3,7 @@
     LUA set of utilities to help manage Loot Settings and autoselling
 
     *** Be sure to set your Loot Settings location correctly with this line ***
+    *** LUA uses \ as escape, so don't forget to \\ your paths
     self.LOOTSETTINGSINI = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
 
     The script has a limited run time and will automatically exit after a designated time in seconds.  You can
@@ -20,12 +21,19 @@
     /kitem <###> - Keep Item, optionally specify how many if it's stackable.  Set's the item on your cursor to Keep in the Loot Settings.ini.
     /sitem <###> - Sell Item, optionally specify how many if it's stackable.. Set's the item on your cursor to Keep,Sell in the Loot Settings.ini.
     /ditem - Destroy Item.  Set's the item on your cursor to Destroy in the Loot Settings.ini.
-    /xitem - Add item to drop list for when you use /autodrop.  If you have multiple items you only need to add 1 item.
+    /xitem - Add item to drop list for when you use /autodrop.  /adrop works on item name, so if you have multiple items with the same name flagging a single item with /xitem will drop all matching items in your inventory
     /sinventory - Sync Inventory.  Sync's your inventory and marks everything new for Keep in Loot Settings.ini.
     /asell - Auto Sell.  This will find the nearest merchant, run up to them and sell any items in your inventory that are tagged Keep,Sell.
     /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
     /pinv - Mostly used for my debug purposes.  Prints the contents of the LUA table where inventory information is held.
-    /adrop loops through your autodrop list and drops all items in your inventory that match 
+    /adrop loops through your autodrop list and drops all items in your inventory that have been flagged with /xitem 
+
+    These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
+    work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling/banking
+
+    self.COMMANDDELAY = 50
+    self.SELLDELAY = 300
+    self.DESTROYDELAY = 100
 ]]
 
 local mq = require('mq')

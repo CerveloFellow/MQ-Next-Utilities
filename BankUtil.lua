@@ -22,6 +22,12 @@
     /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
     /pinv - Mostly used for my debug purposes.  Prints the contents of the LUA table where inventory information is held.
     /abank - Auto Bank - when running this command near a banker, it will open the bank window and auto bank any items in your inventory that are flagged for Keep,Bank
+
+        These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
+    work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling/banking
+
+    self.COMMANDDELAY = 50
+    self.BANKDELAY = 300
 ]]
 
 local mq = require('mq')
@@ -49,7 +55,6 @@ function BankUtil.new()
 
     function self.printBank()
         for i=1,#self.bankArray do
-            --print(self.bankArray[i].key,"---",self.bankArray[i].location,"---",self.bankArray[i].value)
             local value1 = self.bankArray[i].key.."---"..self.bankArray[i].value[1]
             local value2 = self.bankArray[i].key.."---"..self.bankArray[i].value[2]
             print(value1)
