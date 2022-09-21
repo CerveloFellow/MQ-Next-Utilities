@@ -129,7 +129,15 @@ function BankUtil.new()
                         lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
-                        self.inventoryArray[currentItem.Name()] = lookup
+                        local locations = {}
+                        table.insert(locations, lookup.location)
+                        lookup.locations = locations
+                        -- can have multiple items with same name, so create a table of locations
+                        if(self.inventoryArray[currentItem.Name()]) then
+                            table.insert(self.inventoryArray[currentItem.Name()].locations, lookup.location)
+                        else
+                            self.inventoryArray[currentItem.Name()] = lookup
+                        end
                     end
                 end
             else
@@ -140,7 +148,15 @@ function BankUtil.new()
                     lookup.ID = currentItem.ID()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
-                    self.inventoryArray[currentItem.Name()] = lookup
+                    local locations = {}
+                        table.insert(locations, lookup.location)
+                        lookup.locations = locations
+                        -- can have multiple items with same name, so create a table of locations
+                        if(self.inventoryArray[currentItem.Name()]) then
+                            table.insert(self.inventoryArray[currentItem.Name()].locations, lookup.location)
+                        else
+                            self.inventoryArray[currentItem.Name()] = lookup
+                        end
                 end
             end
         end
@@ -179,6 +195,22 @@ function BankUtil.new()
         end
     end
     
+    function self.skipThisItem()
+        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+
+        if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
+            local currentItem = mq.TLO.Cursor
+            local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
+            lsu.setIniValue(keys[1], self.SKIP)
+            if(lsu.getIniValue(keys[2])) then
+                lsu.setIniValue(keys[1], self.SKIP)
+            end
+            print(mq.TLO.Cursor.Name().." has been set to Skip in Loot Settings.ini")
+        else
+            print("No item is on your cursor.")
+        end
+    end
+
     function self.keepThisItem(line)
         local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
 
@@ -330,9 +362,11 @@ function BankUtil.new()
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.BANK)) then
                     if mq.TLO.Window("BigBankWnd").Open() then
-                        print("Banking: ",v1.key," - ",v1.location)
-                        bankSingleItem(v1.location,3)
-                        mq.delay(self.BANKDELAY)
+                        for y=1,#v1.locations do
+                            print("Banking: ",v1.key," - ",v1.locations[y])
+                            bankSingleItem(v1.locations[y],3)
+                            mq.delay(self.BANKDELAY)
+                        end
                     end
                     break
                 end
