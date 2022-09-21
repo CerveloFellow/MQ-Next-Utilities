@@ -62,8 +62,8 @@ function SellUtil.new()
     function self.printInventory()
 
         for k,v in pairs(self.inventoryArray) do
-            local value1 = k.."---"..v.location.."---"..v.value[1]
-            local value2 = k.."---"..v.location.."---"..v.value[2]
+            local value1 = v.ID..": "..k.."---"..v.location.."---"..v.value[1]
+            local value2 = v.ID..": "..k.."---"..v.location.."---"..v.value[2]
             print(value1)
             if(value1 ~= value2) then
                 print(value2)
@@ -102,16 +102,18 @@ function SellUtil.new()
 
         for k,v in pairs(self.inventoryArray) do
             local id = self.dropArray[v.ID]
-
             if(self.dropArray[v.ID]) then
-                mq.cmdf("/itemnotify %s leftmouseup", v.location)
-                mq.delay(100)
-                while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
-                    clickAttempts = clickAttempts + 1
-                    mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
+                for i=1,#v.locations do
+                    mq.cmdf("/itemnotify %s leftmouseup", v.locations[i])
+                    mq.delay(self.COMMANDDELAY)
+                    while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
+                        clickAttempts = clickAttempts + 1
+                        mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
+                        mq.delay(self.COMMANDDELAY)
+                    end
+                    mq.cmdf("/drop")
                     mq.delay(self.COMMANDDELAY)
                 end
-                mq.cmdf("/drop")  
             end
         end
     end
@@ -137,7 +139,15 @@ function SellUtil.new()
                         lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
-                        self.inventoryArray[currentItem.Name()] = lookup
+                        local locations = {}
+                        table.insert(locations, lookup.location)
+                        lookup.locations = locations
+                        -- can have multiple items with same name, so create a table of locations
+                        if(self.inventoryArray[currentItem.Name()]) then
+                            table.insert(self.inventoryArray[currentItem.Name()].locations, lookup.location)
+                        else
+                            self.inventoryArray[currentItem.Name()] = lookup
+                        end
                     end
                 end
             else
@@ -147,7 +157,15 @@ function SellUtil.new()
                     lookup.key = currentItem.Name()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
-                    self.inventoryArray[currentItem.Name()] = lookup
+                    local locations = {}
+                    table.insert(locations, lookup.location)
+                    lookup.locations = locations
+                    -- can have multiple items with same name, so create a table of locations
+                    if(self.inventoryArray[currentItem.Name()]) then
+                        table.insert(self.inventoryArray[currentItem.Name()].locations, lookup.location)
+                    else
+                        self.inventoryArray[currentItem.Name()] = lookup
+                    end
                 end
             end
         end
@@ -351,9 +369,11 @@ function SellUtil.new()
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.SELL)) then
                     if mq.TLO.Window("MerchantWnd").Open() then
-                        print("Selling: ",v1.key," - ",v1.location)
-                        sellSingleItem(v1.location,3)
-                        mq.delay(self.SELLDELAY)
+                        for y=1,#v1.locations do
+                            print("Selling: ",v1.key," - ",v1.locations[y])
+                            sellSingleItem(v1.locations[y],3)
+                            mq.delay(self.SELLDELAY)
+                        end
                         break
                     end
                 end
@@ -367,9 +387,11 @@ function SellUtil.new()
             for k2, v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.DESTROY)) then
-                    print("Destroying: ",v1.key," - ",v1.location)
-                    destroySingleItem(v1.location,3)
-                    mq.delay(self.DESTROYDELAY)
+                    for y=1,#v1.locations do
+                        print("Destroying: ",v1.key," - ",v1.locations[y])
+                        destroySingleItem(v1.locations[y],3)
+                        mq.delay(self.DESTROYDELAY)
+                    end
                     break
                 end
             end
