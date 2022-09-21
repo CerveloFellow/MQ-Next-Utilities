@@ -19,9 +19,10 @@
 
     /pis - Print Item Status.  Prints the Loot Settings status for the item on the cursor.
     /kitem <###> - Keep Item, optionally specify how many if it's stackable.  Set's the item on your cursor to Keep in the Loot Settings.ini.
-    /sitem <###> - Sell Item, optionally specify how many if it's stackable.. Set's the item on your cursor to Keep,Sell in the Loot Settings.ini.
+    /sitem <###> - Sell Item, optionally specify how many if it's stackable. Set's the item on your cursor to Keep,Sell in the Loot Settings.ini.
     /ditem - Destroy Item.  Set's the item on your cursor to Destroy in the Loot Settings.ini.
     /xitem - Add item to drop list for when you use /autodrop.  /adrop works on item name, so if you have multiple items with the same name flagging a single item with /xitem will drop all matching items in your inventory
+    /skipitem - Skip Item.  Set's the item on your cursos to Skip in the Loot Settings.ini.
     /sinventory - Sync Inventory.  Sync's your inventory and marks everything new for Keep in Loot Settings.ini.
     /asell - Auto Sell.  This will find the nearest merchant, run up to them and sell any items in your inventory that are tagged Keep,Sell.
     /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
@@ -53,6 +54,7 @@ function SellUtil.new()
     self.LOOTSETTINGSINI = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
     -- for testing purposes set these to TestKeep, TestSell, etc and use the binds calls to flag itemss
     self.SELL = "Keep,Sell"
+    self.SKIP = "Skip"
     self.DESTROY = "Destroy"
     self.KEEP = "Keep"
     self.COMMANDDELAY = 50
@@ -204,6 +206,22 @@ function SellUtil.new()
         end
     end
     
+    function self.skipThisItem()
+        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+
+        if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
+            local currentItem = mq.TLO.Cursor
+            local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
+            lsu.setIniValue(keys[1], self.SKIP)
+            if(lsu.getIniValue(keys[2])) then
+                lsu.setIniValue(keys[1], self.SKIP)
+            end
+            print(mq.TLO.Cursor.Name().." has been set to Skip in Loot Settings.ini")
+        else
+            print("No item is on your cursor.")
+        end
+    end
+
     function self.keepThisItem(line)
         local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
 
@@ -417,6 +435,7 @@ mq.bind("/kitem", instance.keepThisItem)
 mq.bind("/sitem", instance.sellThisItem)
 mq.bind("/ditem", instance.destroyThisItem)
 mq.bind("/xitem", instance.dropThisItem)
+mq.bind("/skipitem", instance.skipThisItem)
 mq.bind("/sinventory", instance.syncInventory)
 mq.bind("/asell", instance.autoSell)
 mq.bind("/scaninv", instance.scanInventory)
