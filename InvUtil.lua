@@ -265,7 +265,7 @@ function InvUtil.new()
             local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
             lsu.setIniValue(keys[1],self.BANK..stackSizeSetting)
             if(lsu.getIniValue(keys[2])) then
-                lsu.setIniValue(keys[1], self.BANK..stackSizeSetting)
+                lsu.setIniValue(keys[2], self.BANK..stackSizeSetting)
             end
             print(currentItem.Name().." has been set to Keep,Bank in Loot Settings.ini")
         else
@@ -281,7 +281,7 @@ function InvUtil.new()
             local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
             lsu.setIniValue(keys[1], self.DESTROY)
             if(lsu.getIniValue(keys[2])) then
-                lsu.setIniValue(keys[1], self.DESTROY)
+                lsu.setIniValue(keys[2], self.DESTROY)
             end
             print(mq.TLO.Cursor.Name().." has been set to Destroy in Loot Settings.ini")
         else
@@ -297,7 +297,7 @@ function InvUtil.new()
             local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
             lsu.setIniValue(keys[1], self.SKIP)
             if(lsu.getIniValue(keys[2])) then
-                lsu.setIniValue(keys[1], self.SKIP)
+                lsu.setIniValue(keys[2], self.SKIP)
             end
             print(mq.TLO.Cursor.Name().." has been set to Skip in Loot Settings.ini")
         else
@@ -315,7 +315,7 @@ function InvUtil.new()
             local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
             lsu.setIniValue(keys[1], self.KEEP..stackSizeSetting)
             if(lsu.getIniValue(keys[2])) then
-                lsu.setIniValue(keys[1], self.KEEP..stackSizeSetting)
+                lsu.setIniValue(keys[2], self.KEEP..stackSizeSetting)
             end
             print(mq.TLO.Cursor.Name().." has been set to Keep in Loot Settings.ini")
         else
@@ -333,7 +333,7 @@ function InvUtil.new()
             local keys = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
             lsu.setIniValue(keys[1],self.SELL..stackSizeSetting)
             if(lsu.getIniValue(keys[2])) then
-                lsu.setIniValue(keys[1], self.SELL..stackSizeSetting)
+                lsu.setIniValue(keys[2], self.SELL..stackSizeSetting)
             end
             print(mq.TLO.Cursor.Name().." has been set to Keep,Sell|"..mq.TLO.Cursor.StackSize().." in Loot Settings.ini")
         else
