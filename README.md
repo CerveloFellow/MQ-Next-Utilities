@@ -11,3 +11,4 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
   /lua run SellUtil  
   /lua run BankUtil  
 
+**Note** Both SellUtil and BankUtil use some of the same binds, so running them together will give you an error about the binds. I'm probably going to combine these into a single library to avoid that if there is enough interest.
