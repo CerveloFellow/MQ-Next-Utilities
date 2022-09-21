@@ -12,6 +12,7 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
  **/lua run InvUtil**  
   
 # Overview
+## Binds
 - **/abank** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **This does not check if there are available bank slots yet, so use at your own risk**
 - **/adrop** - Auto Drop.  Any items that have been flagged to drop with the **/xitem** command will be automatically dropped on the ground when you issue this command.  
 - **/asell** - Auto Sell.  Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.
@@ -29,6 +30,8 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
 - **/skipitem** - Skip Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Skip.
 - **/syncbank** - Synchronize Bank.  This will scan your bank and flag any item in your bank as Keep,Bank in your Loot Settings.ini file.
 - **/xitem** - Drop Item. While an item is on your cursor and you issue this command, the item will **temporarily** get added to the drop array.  If you have multiple items with the same name, you only need to add a single item to the array.  Once you've added all the items you want to your drop array, you can issue the **/adrop** command.
+## Events
+- **event_soldItem** - Triggers on 'You receive #*# from #1# for the #2#(s).  While the script is running and you sell any item to the vendor, the item will automatically get flagged in your Loot Settings.ini for Keep,Sell in the future.
 
 # Notes on Loot Settings.ini key creation
 There appear to be a couple algorithims for determining keys in the Loot Settings.ini key/value pairs.  The main difference is in the coin value on an item entry.  I'm using the long coin setting algorithm where if you have a raw coin value of 54321, the value comes as 54p3g2s1c.  The other algorithm that some people use for a similar raw value will only use 54p for the value.  Both keys are stored and used for lookup when looking for a match in the Loot Settings.ini file, however when a new entry is created, the long algorithm is used.
