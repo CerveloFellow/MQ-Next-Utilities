@@ -7,7 +7,8 @@ Utilities I've written for Everquest(Project Lazarus) MacroQuest Next
 **InvUtil.lua** - Inventory utilities that provides some slash commands to help manage inventory and banking.  
 
 # Usage
-To use with Project Lazarus, download these files into your E3_RoF2\lua folder.   
+To use with Project Lazarus, download these files into your E3_RoF2\lua folder.  
+  
  Within Everquest you can run:  
  **/lua run InvUtil**  
   
