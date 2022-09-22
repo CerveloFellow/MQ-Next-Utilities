@@ -40,7 +40,7 @@ The first time you run the script, if an INI file is not present, one will be cr
 - **/sitem <###>**- Sell Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Sell.  Optionally you can specify a count for how many to sell.
 - **/skipitem** - Skip Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Skip.
 - **/syncbank** - Synchronize Bank.  This will scan your bank and flag any item in your bank as Keep,Bank in your Loot Settings.ini file.
-- **/xitem** - Drop Item. While an item is on your cursor and you issue this command, the item will **temporarily** get added to the drop array.  If you have multiple items with the same name, you only need to add a single item to the array.  Once you've added all the items you want to your drop array, you can issue the **/adrop** command.
+- **/xitem** - Drop Item. While an item is on your cursor and you issue this command, the item will **temporarily** get added to the drop array.  If you have multiple items with the same name, you only need to add a single item to the array.  Once you've added all the items you want to your drop array, you can issue the **/adrop** command.  The drop array will exist as long as the script is running or until you issue a **/dropclear** command.
 ## Events
 - **event_soldItem** - Triggers on 'You receive #*# from #1# for the #2#(s).  While the script is running and you sell any item to the vendor, the item will automatically get flagged in your Loot Settings.ini for Keep,Sell in the future.
 
