@@ -14,6 +14,9 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
   
 # Overview
 ## InvUtil.ini
+
+The first time you run the script, if an INI file is not present, one will be created with default values and the script will exit automatically.
+
 |Key|Value|
 |------------|-------------|
 |**Script&nbsp;Run&nbsp;Time(seconds)**|The time in seconds for the script to auto terminate.  Setting this to 0 will disable auto terminate|
