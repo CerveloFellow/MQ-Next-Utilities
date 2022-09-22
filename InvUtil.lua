@@ -17,24 +17,31 @@
 
     Additionaly some binds are created that are helper items for this utility.  These binds only exists while the script is running.
 
-    /pis - Print Item Status.  Prints the Loot Settings status for the item on the cursor.
-    /kitem <###> - Keep Item, optionally specify how many if it's stackable.  Set's the item on your cursor to Keep in the Loot Settings.ini.
-    /sitem <###> - Sell Item, optionally specify how many if it's stackable. Set's the item on your cursor to Keep,Sell in the Loot Settings.ini.
-    /ditem - Destroy Item.  Set's the item on your cursor to Destroy in the Loot Settings.ini.
-    /xitem - Add item to drop list for when you use /autodrop.  /adrop works on item name, so if you have multiple items with the same name flagging a single item with /xitem will drop all matching items in your inventory
-    /skipitem - Skip Item.  Set's the item on your cursos to Skip in the Loot Settings.ini.
-    /sinventory - Sync Inventory.  Sync's your inventory and marks everything new for Keep in Loot Settings.ini.
-    /asell - Auto Sell.  This will find the nearest merchant, run up to them and sell any items in your inventory that are tagged Keep,Sell.
-    /scaninv - Mostly used for my debug purposes.  Scans your inventory into an LUA table with appropriate information.   
-    /pinv - Mostly used for my debug purposes.  Prints the contents of the LUA table where inventory information is held.
-    /adrop loops through your autodrop list and drops all items in your inventory that have been flagged with /xitem.  AutoDrop is temporary and does not persist in Loot Settings.ini
-    /dropclear - removes all items from your drop array
+    /abank - Auto Bank. When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank. This does not check if there are available bank slots yet, so use at your own risk
+    /adrop - Auto Drop. Any items that have been flagged to drop with the /xitem command will be automatically dropped on the ground when you issue this command.
+    /asell - Auto Sell. Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.
+    /bitem - Bank Item. While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Bank.
+    /dinv - Print Drop List. This will print the items that have been flagged for autodrop.
+    /ditem - Destroy Item. While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Destroy.
+    /dropclear - Clear Drop List. Thsi will remove all items from your temporary drop list(any items added with the /xitem command).
+    /kitem <###> - Keep Item. While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep. Optionally you can specify a count for how many to keep.
+    /pbank - Print Bank. This will print the items that are stored in your bank. Primarily used by me for debugging purposes.
+    /pinv - Print Inventory. This will print the items in your inventory that have been scanned with /scaninv. Primarily used by me for debugging purposes.
+    /pis - Print Item Status. While an item is on your cursor and you issue this command, it will print the status of the item from the Loot Settings.ini
+    /scaninv - Scan Inventory. Will run a rescan of your inventory to re-create the inventory array. Primarily used by me for debugging.
+    /sinventory - Synchronize Inventory. This will run through your inventory list and put an entry in your Loot Settings.ini file for the new items.
+    /sitem <###>- Sell Item. While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Sell. Optionally you can specify a count for how many to sell.
+    /skipitem - Skip Item. While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Skip.
+    /syncbank - Synchronize Bank. This will scan your bank and flag any item in your bank as Keep,Bank in your Loot Settings.ini file.
+    /xitem - Drop Item. While an item is on your cursor and you issue this command, the item will temporarily get added to the drop array. If you have multiple items with the same name, you only need to add a single item to the array. Once you've added all the items you want to your drop array, you can issue the /adrop command.
+
     These values are used to introduce delays after certaion actions.  If you run into situations where not all items get sold you may want to increase the delay values.  These values
     work pretty reliably for me.  Some people have had luck running with lower delays and have faster selling
 
     self.COMMANDDELAY = 50
     self.SELLDELAY = 300
     self.DESTROYDELAY = 100
+    self.BANKDELAY = 300
 ]]
 
 local mq = require('mq')
@@ -65,16 +72,14 @@ function InvUtil.new()
 
     function self.printBank()
         local lastBankItem = ""
+        local bankItemCount = 0
         for k1,v1 in pairs(self.bankArray) do
-            for k2,v2 in pairs(v1.value) do
-                if(v2 ~= lastBankItem) then
-                    print(v2)
-                end
-                lastBankItem = v2
-            end
+            bankItemCount = bankItemCount + v1.itemCount
+            local printLine = string.format("%s (%d)",v1.key,v1.itemCount)
+            print(printLine)
         end
-
-        print(string.format("%d items in your bank", #self.bankArray))
+        print(string.format("%d items in your bank", bankItemCount))
+        print(string.format("%d free bank slots", self.bankSlotsOpen()))
     end
 
     function self.bankSlotsOpen()
@@ -110,7 +115,13 @@ function InvUtil.new()
                         lookup.key = currentItem.Name()
                         lookup.ID = currentItem.ID()
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
-                        self.bankArray[currentItem.Name()] = lookup
+                        lookup.itemCount = 1
+                        if(self.bankArray[currentItem.Name()]) then
+                            local itemCount = self.bankArray[currentItem.Name()].itemCount
+                            self.bankArray[currentItem.Name()].itemCount = itemCount +1
+                        else
+                            self.bankArray[currentItem.Name()] = lookup
+                        end
                     end
                 end
             else
@@ -120,7 +131,13 @@ function InvUtil.new()
                     lookup.key = currentItem.Name()
                     lookup.ID = currentItem.ID()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
-                    self.bankArray[currentItem.Name()] = lookup
+                    lookup.itemCount = 1
+                    if(self.bankArray[currentItem.Name()]) then
+                        local itemCount = self.bankArray[currentItem.Name()].itemCount
+                        self.bankArray[currentItem.Name()].itemCount = itemCount +1
+                    else
+                        self.bankArray[currentItem.Name()] = lookup
+                    end
                 end
             end
         end
@@ -390,6 +407,12 @@ function InvUtil.new()
                 mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
                 mq.delay(self.COMMANDDELAY)
                 mq.cmdf("/notify BigBankWnd BIGB_AutoButton leftmouseup")
+                mq.delay(self.COMMANDDELAY)
+            end
+            -- Something went wrong trying to autobank it.  Put item bank where you found it.
+            if(mq.TLO.Cursor) then
+                print(string.format("Unable to bank %s.  Check if you have available bank space and that the item is not No Storage", mq.TLO.Cursor.Name()))
+                mq.cmdf("/itemnotify %s leftmouseup", location)
                 mq.delay(self.COMMANDDELAY)
             end
         end
