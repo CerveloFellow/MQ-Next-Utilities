@@ -36,7 +36,7 @@ The first time you run the script, if an INI file is not present, one will be cr
 - **/pinv** - Print Inventory.  This will print the items in your inventory that have been scanned with **/scaninv**.  Primarily used by me for debugging purposes.
 - **/pis** - Print Item Status.  While an item is on your cursor and you issue this command, it will print the status of the item from the Loot Settings.ini
 - **/scaninv** - Scan Inventory.  Will run a rescan of your inventory to re-create the inventory array.  Primarily used by me for debugging.
-- **/sinventory** - Synchronize Inventory.  This will run through your inventory list and put an entry in your Loot Settings.ini file for the new items.
+- **/sinventory** - Synchronize Inventory.  This will iterate through your inventory list and put an entry in your Loot Settings.ini file for any items in your inventory that are not in the Loot Settings.ini file.
 - **/sitem <###>**- Sell Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Sell.  Optionally you can specify a count for how many to sell.
 - **/skipitem** - Skip Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Skip.
 - **/syncbank** - Synchronize Bank.  This will scan your bank and flag any item in your bank as Keep,Bank in your Loot Settings.ini file.
