@@ -8,7 +8,13 @@ Utilities I've written for Everquest(Project Lazarus) MacroQuest Next
 
 # Usage
 To use with Project Lazarus, download these files into your E3_RoF2\lua folder.  
-  
+
+## Script configuration
+There is one setting in the script you'll have to set manually to point to the location you want your INI file.  Update this line to point to the correct config location where you want your INI to reside.  Be sure to use double forward slashes(\\\\) since these get escaped in strings.
+
+**self.INVUTILINI = "C:\\\\E3_RoF2\\\\config\\\\InvUtil.ini"**
+
+
  Within Everquest you can run:  
  **/lua run InvUtil**  
   
