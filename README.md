@@ -18,9 +18,9 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
 - **/adrop** - Auto Drop.  Any items that have been flagged to drop with the **/xitem** command will be automatically dropped on the ground when you issue this command.  
 - **/asell** - Auto Sell.  Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.
 - **/bitem** - Bank Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Bank.
-- **/dinv** - Print Drop List.  This will print the items that have been flagged to drop to your inventory window.  
+- **/dinv** - Print Drop List.  This will print the items that have been flagged to drop.  
 - **/ditem** - Destroy Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Destroy.
-- **/dropclear** - Clear Drop List.  Thsi will remove all items from your temporary drop list(any items added with the **/xitem** command)
+- **/dropclear** - Clear Drop List.  Thsi will remove all items from your temporary drop list(any items added with the **/xitem** command).
 - **/kitem <###>** - Keep Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep.  Optionally you can specify a count for how many to keep.
 - **/pbank** - Print Bank.  This will print the items that are stored in your bank.  Primarily used by me for debugging purposes.
 - **/pinv** - Print Inventory.  This will print the items in your inventory that have been scanned with **/scaninv**.  Primarily used by me for debugging purposes.
