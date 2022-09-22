@@ -14,7 +14,7 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
   
 # Overview
 ## Binds
-- **/abank** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When your bank slots are full or the item is No Storage, it will now be placed back in your inventory where it came from and print a message notifying you of the error.**
+- **/abank** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When the item can't be stored in the bank for some reason(your bank is full, item is No Storage, etc.), the item will now be placed back in your inventory.**
 - **/adrop** - Auto Drop.  Any items that have been flagged to drop with the **/xitem** command will be automatically dropped on the ground when you issue this command.  
 - **/asell** - Auto Sell.  Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.
 - **/bitem** - Bank Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Bank.
