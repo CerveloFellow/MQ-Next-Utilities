@@ -665,6 +665,11 @@ function InvUtil.new()
             if(tempString) then
                 self.enableItemSoldEvent = stringtoboolean[tempString]
             end
+
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Loot Settings File")()
+            if(tempString) then
+                self.lootSettingsIni = tempString
+            end
         else
             print("No InvUtil.ini is present.  Creating one and exiting.  Please edit the file and re-run the script.")
             createIniDefaults()
