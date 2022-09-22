@@ -13,6 +13,13 @@ To use with Project Lazarus, download these files into your E3_RoF2\lua folder.
  **/lua run InvUtil**  
   
 # Overview
+## InvUtil.ini
+|Key|Value|
+|------------|-------------|
+|**Script&nbsp;Run&nbsp;Time(seconds)**|The time in seconds for the script to auto terminate.  Setting this to 0 will disable auto terminate|
+|**Enable&nbsp;Sold&nbsp;Item&nbsp;Event(true\false)**|Toggle whether the enable sold items event is on.  If true, any items sold to the vendor will automatically get flagged as Keep,Sell|
+|**Loot&nbsp;Settings&nbsp;File**|The path to your Loot Settings.ini(e.g. C:\E3_RoF2\Macros\e3 Macro Inis\Loot Settings.ini)|
+
 ## Binds
 - **/abank** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When the item can't be stored in the bank for some reason(your bank is full, item is No Storage, etc.), the item will now be placed back in your inventory.**
 - **/adrop** - Auto Drop.  Any items that have been flagged to drop with the **/xitem** command will be automatically dropped on the ground when you issue this command.  
