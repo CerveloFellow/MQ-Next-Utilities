@@ -644,6 +644,7 @@ function InvUtil.new()
         end
 
         self.scanInventory()
+        mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
     end
 
     function createIniDefaults()
