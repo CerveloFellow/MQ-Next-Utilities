@@ -74,6 +74,7 @@ function InvUtil.new()
     self.BANKDELAY = 300
     self.defaultScriptRunTime = 300
     self.enableItemSoldEvent = true
+    self.notAutoSelling = true
     self.defaultLootSettingsIni = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
 
     function self.printBank()
@@ -397,7 +398,7 @@ function InvUtil.new()
     end
 
     function self.itemSold(line, merchantName, itemName)
-        if(self.enableItemSoldEvent) then
+        if(self.enableItemSoldEvent and self.notAutoSelling) then
             local lsu = LootSettingUtil.new(self.lootSettingsIni)
             local lootIniKey = self.inventoryArray[itemName].value
             lsu.setIniValue(lootIniKey[1], self.SELL)
@@ -603,6 +604,7 @@ function InvUtil.new()
         local maxClickAttempts = 3
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
+        self.notAutoSelling = false
         self.scanInventory()
 
         if not openMerchant() then
@@ -644,6 +646,7 @@ function InvUtil.new()
         end
 
         self.scanInventory()
+        self.notAutoSelling = true
         mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
     end
 
