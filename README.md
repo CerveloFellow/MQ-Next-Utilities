@@ -30,9 +30,9 @@ The first time you run the script, if an INI file is not present, one will be cr
 |**Loot&nbsp;Settings&nbsp;File**|The path to your Loot Settings.ini(e.g. C:\E3_RoF2\Macros\e3 Macro Inis\Loot Settings.ini)|
 
 ## Binds
-- **/abank** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When the item can't be stored in the bank for some reason(your bank is full, item is No Storage, etc.), the item will now be placed back in your inventory.**
+- **/abank [print]** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When the item can't be stored in the bank for some reason(your bank is full, item is No Storage, etc.), the item will now be placed back in your inventory.**  Optionally **/abank print** will only print the items that will be banked.
 - **/adrop** - Auto Drop.  Any items that have been flagged to drop with the **/xitem** command will be automatically dropped on the ground when you issue this command.  
-- **/asell** - Auto Sell.  Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.
+- **/asell [print]** - Auto Sell.  Any items in your inventory that are Flagged as Keep,Sell in your Loot Settings.ini will be automatically sold to the nearest vendor.  Optionally **/sell print** will only print the items that will be banked.
 - **/bitem** - Bank Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Keep,Bank.
 - **/dinv** - Print Drop List.  This will print the items that have been flagged to drop.  
 - **/ditem** - Destroy Item.  While an item is on your cursor and you issue this command, this will flag the item in your Loot Settings.ini as Destroy.
