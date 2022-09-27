@@ -262,6 +262,11 @@ function InvUtil.new()
         end
     end
 
+    function self.sortLootFile()
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        lsu.iniSort()
+    end
+    
     function self.printItemStatus()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
@@ -731,6 +736,7 @@ mq.bind("/scaninv", instance.scanInventory)
 mq.bind("/sinventory", instance.syncInventory)
 mq.bind("/sitem", instance.sellThisItem)
 mq.bind("/skipitem", instance.skipThisItem)
+mq.bind("/sortlootfile", instance.sortLootFile)
 mq.bind("/syncbank", instance.syncBank)
 mq.bind("/xitem", instance.dropThisItem)
 
