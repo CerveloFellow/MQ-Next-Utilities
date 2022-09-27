@@ -480,9 +480,11 @@ function InvUtil.new()
         return true
     end
 
-    function self.autoBank()
+    function self.autoBank(...)
+        local arg={...}
         local maxClickAttempts = 3
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
         self.scanInventory()
 
@@ -498,7 +500,9 @@ function InvUtil.new()
                     if mq.TLO.Window("BigBankWnd").Open() then
                         for y=1,#v1.locations do
                             print("Banking: ",v1.key," - ",v1.locations[y])
-                            bankSingleItem(v1.locations[y],3)
+                            if not printMode then
+                                bankSingleItem(v1.locations[y],3)
+                            end
                             mq.delay(self.BANKDELAY)
                         end
                     end
@@ -600,9 +604,11 @@ function InvUtil.new()
         return true
     end
 
-    function self.autoSell()
+    function self.autoSell(...)
+        local arg = {...}
         local maxClickAttempts = 3
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
         self.notAutoSelling = false
         self.scanInventory()
@@ -611,7 +617,7 @@ function InvUtil.new()
             print("Error attempting to open trade window with merchant.")
             return
         end
-
+    
         for k1,v1 in pairs(self.inventoryArray) do
             for k2,v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
@@ -619,7 +625,9 @@ function InvUtil.new()
                     if mq.TLO.Window("MerchantWnd").Open() then
                         for y=1,#v1.locations do
                             print("Selling: ",v1.key," - ",v1.locations[y])
-                            sellSingleItem(v1.locations[y],3)
+                            if not printMode then
+                                sellSingleItem(v1.locations[y],3)
+                            end
                             mq.delay(self.SELLDELAY)
                         end
                         break
@@ -637,7 +645,9 @@ function InvUtil.new()
                 if(string.find(lootSetting, self.DESTROY)) then
                     for y=1,#v1.locations do
                         print("Destroying: ",v1.key," - ",v1.locations[y])
-                        destroySingleItem(v1.locations[y],3)
+                        if not printMode then
+                            destroySingleItem(v1.locations[y],3)
+                        end
                         mq.delay(self.DESTROYDELAY)
                     end
                     break
