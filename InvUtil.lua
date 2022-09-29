@@ -642,8 +642,20 @@ function InvUtil.new()
         end
 
         closeMerchant()
-        self.scanInventory()
+        self.notAutoSelling = true
 
+        self.autoDestroy(...)
+        self.scanInventory()
+        mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
+    end
+
+    function self.autoDestroy(...)
+        local arg = {...}
+        local maxClickAttempts = 3
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
+
+        self.scanInventory()
         for k1,v1 in pairs(self.inventoryArray) do
             for k2, v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
@@ -659,10 +671,6 @@ function InvUtil.new()
                 end
             end
         end
-
-        self.scanInventory()
-        self.notAutoSelling = true
-        mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
     end
 
     function createIniDefaults()
@@ -722,6 +730,7 @@ if(instance.enableItemSoldEvent) then
 end
 
 mq.bind("/abank", instance.autoBank)
+mq.bind("/adestroy", instance.autoDestroy)
 mq.bind("/adrop", instance.autoDrop)
 mq.bind("/asell", instance.autoSell)
 mq.bind("/bitem", instance.bankThisItem)
