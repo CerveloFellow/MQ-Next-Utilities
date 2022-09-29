@@ -125,6 +125,63 @@ function LootSettingUtil.new(pathToIniFile)
         mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.lootSettingsIni, string.sub(itemKey,1,1), itemKey, itemValue)
     end
 
+    local function CopyFile(old_path, new_path)
+        local old_file = io.open(old_path, "rb")
+        local new_file = io.open(new_path, "wb")
+        local old_file_sz, new_file_sz = 0, 0
+        if not old_file or not new_file then
+          return false
+        end
+        while true do
+          local block = old_file:read(2^13)
+          if not block then 
+            old_file_sz = old_file:seek( "end" )
+            break
+          end
+          new_file:write(block)
+        end
+        old_file:close()
+        new_file_sz = new_file:seek( "end" )
+        new_file:close()
+        return new_file_sz == old_file_sz
+      end
+
+    function self.iniSort()
+        local tableKey = ""
+        local lootTable = {}
+        local backupFileName = self.lootSettingsIni..os.time(os.date("!*t"))..".backup"
+
+        print("Backing up Loot Settings")
+        CopyFile(self.lootSettingsIni, backupFileName)
+
+        print("Sorting")
+        local file = io.open(self.lootSettingsIni)
+        lines = file:lines()
+
+        for line in lines do  
+            if(string.sub(line,1,1)~="[") then
+                table.insert(lootTable, line)
+            end
+        end
+        file.close()
+
+        table.sort(lootTable)
+
+        file = io.open(self.lootSettingsIni, "w")
+        for i=1,#lootTable do
+            if(lootTable[i] and #lootTable[i]>0) then
+                local currentTableKey = string.upper(lootTable[i],1,1)
+                currentTableKey = "["..string.sub(currentTableKey,1,1).."]"
+                if currentTableKey ~= tableKey then
+                    file:write(currentTableKey, "\n")
+                    tableKey = currentTableKey
+                end
+                file:write(lootTable[i], "\n")
+            end
+        end
+        file.close()
+        print("Sort Complete")
+    end
     return self
 end
 
