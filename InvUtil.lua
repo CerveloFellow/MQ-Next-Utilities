@@ -216,6 +216,7 @@ function InvUtil.new()
                     local currentItem = mq.TLO.Me.Inventory(i+22)
                     local lookup = {}
                     lookup.key = currentItem.Name()
+                    lookup.ID = currentItem.ID()
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
                     local locations = {}
@@ -674,6 +675,20 @@ function InvUtil.new()
             self.enableItemSoldEvent = true
             self.lootSettingsIni = self.defaultLootSettingsIni
             os.exit()
+        end
+    end
+
+    -- returns true if inventory location is empty, otherwise it returns false if there is an item in the slot
+    function self.inventoryLocationEmpty(location)
+        words = {}
+        for word in location:gmatch("%w+") do 
+            table.insert(words, word) 
+        end
+
+        if(#words > 1) then
+            return not (mq.TLO.Me.Inventory(words[2]).Item(words[3]).Name())
+        else
+            return not (mq.TLO.Me.Inventory(tonumber(words[1])).Name())
         end
     end
 
