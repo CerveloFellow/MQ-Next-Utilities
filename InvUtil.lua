@@ -595,6 +595,8 @@ function InvUtil.new()
         end
     
         for k1,v1 in pairs(self.inventoryArray) do
+            local attempts = 0
+
             for k2,v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.SELL)) then
@@ -602,9 +604,14 @@ function InvUtil.new()
                         for y=1,#v1.locations do
                             print("Selling: ",v1.key," - ",v1.locations[y])
                             if not printMode then
-                                sellSingleItem(v1.locations[y],3)
+                                attempts = 0
+                                while(not self.inventoryLocationEmpty(v1.locations[y]) and (attempts < 5))
+                                do
+                                    sellSingleItem(v1.locations[y],3)
+                                    attempts = attempts + 1
+                                    mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
+                                end
                             end
-                            mq.delay(self.SELLDELAY)
                         end
                         break
                     end
@@ -679,9 +686,9 @@ function InvUtil.new()
     end
 
     -- returns true if inventory location is empty, otherwise it returns false if there is an item in the slot
-    function self.inventoryLocationEmpty(location)
+    function self.inventoryLocationEmpty(itemLocation)
         words = {}
-        for word in location:gmatch("%w+") do 
+        for word in itemLocation:gmatch("%w+") do 
             table.insert(words, word) 
         end
 
