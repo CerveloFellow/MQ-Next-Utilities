@@ -2,9 +2,12 @@
     Sell Utilities
     LUA set of utilities to help manage Loot Settings and autoselling
 
-    *** Be sure to set your Loot Settings location correctly with this line ***
+    *** Be sure to set your Inventory Util INI location correctly with this line ***
     *** LUA uses \ as escape, so don't forget to \\ your paths
-    self.LOOTSETTINGSINI = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
+    self.INVUTILINI = "C:\\E3_RoF2\\config\\InvUtil.ini"
+
+    You may also want to edit your default Loot Settings file location.  This can be updated in the Inventory Util INI file at any time.
+    self.defaultLootSettingsIni = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
 
     The script has a limited run time and will automatically exit after a designated time in seconds.  You can
     change the time by finding the following line and changing to to an appropriate value
@@ -59,7 +62,7 @@ function InvUtil.new()
 
     self.inventoryArray = inventoryArray
     self.dropArray = dropArray
-    self.LOOTSETTINGSINI = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
+    self.INVUTILINI = "C:\\E3_RoF2\\config\\InvUtil.ini"
     self.SELL = "Keep,Sell"
     self.SKIP = "Skip"
     self.DESTROY = "Destroy"
@@ -69,6 +72,10 @@ function InvUtil.new()
     self.SELLDELAY = 300
     self.DESTROYDELAY = 100
     self.BANKDELAY = 300
+    self.defaultScriptRunTime = 300
+    self.enableItemSoldEvent = true
+    self.notAutoSelling = true
+    self.defaultLootSettingsIni = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
 
     function self.printBank()
         local lastBankItem = ""
@@ -255,8 +262,13 @@ function InvUtil.new()
         end
     end
 
+    function self.sortLootFile()
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        lsu.iniSort()
+    end
+    
     function self.printItemStatus()
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -264,8 +276,10 @@ function InvUtil.new()
             local lootSetting = lsu.getIniValue(currentIniKey[1]) or "No Loot Setting Defined"
             print(mq.TLO.Cursor.Name().."|"..currentIniKey[1].."|"..lootSetting.."|")
             if(currentIniKey[1] ~= currentIniKey[2]) then
-                lootSetting = lsu.getIniValue(currentIniKey[2]) or "No Loot Setting Defined"
-                print(mq.TLO.Cursor.Name().."|"..currentIniKey[2].."|"..lootSetting.."|")
+                lootSetting = lsu.getIniValue(currentIniKey[2])
+                if(lootSetting) then
+                    print(mq.TLO.Cursor.Name().."|"..currentIniKey[2].."|"..lootSetting.."|")
+                end 
             end
         else
             print("No item is on your cursor.")
@@ -273,7 +287,7 @@ function InvUtil.new()
     end
 
     function self.bankThisItem(line)
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -291,7 +305,7 @@ function InvUtil.new()
     end
 
     function self.destroyThisItem()
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -307,7 +321,7 @@ function InvUtil.new()
     end
     
     function self.skipThisItem()
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -323,7 +337,7 @@ function InvUtil.new()
     end
 
     function self.keepThisItem(line)
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -341,7 +355,7 @@ function InvUtil.new()
     end
     
     function self.sellThisItem(line)
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         if (not (mq.TLO.Cursor.ID() == nil)) and (mq.TLO.Cursor.ID() > 0) then
             local currentItem = mq.TLO.Cursor
@@ -359,7 +373,7 @@ function InvUtil.new()
     end
 
     function self.syncBank()
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         self.scanBank()
         print("Sync Bank Starting")
@@ -372,7 +386,7 @@ function InvUtil.new()
     end
 
     function self.syncInventory()
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
 
         self.scanInventory()
         print("Sync Inventory Starting")
@@ -389,10 +403,12 @@ function InvUtil.new()
     end
 
     function self.itemSold(line, merchantName, itemName)
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
-        local lootIniKey = self.inventoryArray[itemName].value
-        lsu.setIniValue(lootIniKey[1], self.SELL)
-        print(itemName, " has been set to ", self.SELL)
+        if(self.enableItemSoldEvent and self.notAutoSelling) then
+            local lsu = LootSettingUtil.new(self.lootSettingsIni)
+            local lootIniKey = self.inventoryArray[itemName].value
+            lsu.setIniValue(lootIniKey[1], self.SELL)
+            print(itemName, " has been set to ", self.SELL)
+        end
     end
 
     function bankSingleItem(location, maxClickAttempts)
@@ -469,9 +485,11 @@ function InvUtil.new()
         return true
     end
 
-    function self.autoBank()
+    function self.autoBank(...)
+        local arg={...}
         local maxClickAttempts = 3
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
         self.scanInventory()
 
@@ -487,7 +505,9 @@ function InvUtil.new()
                     if mq.TLO.Window("BigBankWnd").Open() then
                         for y=1,#v1.locations do
                             print("Banking: ",v1.key," - ",v1.locations[y])
-                            bankSingleItem(v1.locations[y],3)
+                            if not printMode then
+                                bankSingleItem(v1.locations[y],3)
+                            end
                             mq.delay(self.BANKDELAY)
                         end
                     end
@@ -589,17 +609,20 @@ function InvUtil.new()
         return true
     end
 
-    function self.autoSell()
+    function self.autoSell(...)
+        local arg = {...}
         local maxClickAttempts = 3
-        local lsu = LootSettingUtil.new(self.LOOTSETTINGSINI)
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
+        self.notAutoSelling = false
         self.scanInventory()
 
         if not openMerchant() then
             print("Error attempting to open trade window with merchant.")
             return
         end
-
+    
         for k1,v1 in pairs(self.inventoryArray) do
             for k2,v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
@@ -607,7 +630,9 @@ function InvUtil.new()
                     if mq.TLO.Window("MerchantWnd").Open() then
                         for y=1,#v1.locations do
                             print("Selling: ",v1.key," - ",v1.locations[y])
-                            sellSingleItem(v1.locations[y],3)
+                            if not printMode then
+                                sellSingleItem(v1.locations[y],3)
+                            end
                             mq.delay(self.SELLDELAY)
                         end
                         break
@@ -617,39 +642,95 @@ function InvUtil.new()
         end
 
         closeMerchant()
-        self.scanInventory()
+        self.notAutoSelling = true
 
+        self.autoDestroy(...)
+        self.scanInventory()
+        mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
+    end
+
+    function self.autoDestroy(...)
+        local arg = {...}
+        local maxClickAttempts = 3
+        local lsu = LootSettingUtil.new(self.lootSettingsIni)
+        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
+
+        self.scanInventory()
         for k1,v1 in pairs(self.inventoryArray) do
             for k2, v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.DESTROY)) then
                     for y=1,#v1.locations do
                         print("Destroying: ",v1.key," - ",v1.locations[y])
-                        destroySingleItem(v1.locations[y],3)
+                        if not printMode then
+                            destroySingleItem(v1.locations[y],3)
+                        end
                         mq.delay(self.DESTROYDELAY)
                     end
                     break
                 end
             end
         end
+    end
 
-        self.scanInventory()
+    function createIniDefaults()
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Script Run Time(seconds)", self.defaultScriptRunTime)
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Enable Sold Item Event(true\\false)", "true")
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Loot Settings File", self.defaultLootSettingsIni)
+    end
+
+    function self.getIniSettings()
+        stringtoboolean={ ["true"]=true, ["false"]=false }
+
+        if(mq.TLO.Ini(self.INVUTILINI)()) then
+            local tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Script Run Time(seconds)")()
+            if(tempString) then 
+                self.scriptRunTime = tonumber(tempString)
+            end
+
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Enable Sold Item Event(true\\false)")()
+            if(tempString) then
+                self.enableItemSoldEvent = stringtoboolean[tempString]
+            end
+
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Loot Settings File")()
+            if(tempString) then
+                self.lootSettingsIni = tempString
+            end
+        else
+            print("No InvUtil.ini is present.  Creating one and exiting.  Please edit the file and re-run the script.")
+            createIniDefaults()
+            self.scriptRunTime = self.defaultScriptRunTime
+            self.enableItemSoldEvent = true
+            self.lootSettingsIni = self.defaultLootSettingsIni
+            os.exit()
+        end
     end
 
     return self
 end
 
-local scriptRunTime = 300
 local startTime = os.clock()
 local instance = InvUtil.new()
 local loopBoolean = true
 
+instance.getIniSettings()
 instance.scanInventory()
 instance.scanBank()
 
-print(string.format("For the next %ss seconds, any items you sell the the vendor will automatically get flagged as Keep,Sell", scriptRunTime))
+print("InvUtil has been started")
+if(instance.scriptRunTime > 0) then
+    print(string.format("InvUtil will automatically terminat in %s seconds.", instance.scriptRunTime))
+else
+    print("InvUtil will not automatically terminate and you will have to issue /lua stop or /lua stop InvUtil to terminate this script.")
+end
+
+if(instance.enableItemSoldEvent) then
+    print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
+end
 
 mq.bind("/abank", instance.autoBank)
+mq.bind("/adestroy", instance.autoDestroy)
 mq.bind("/adrop", instance.autoDrop)
 mq.bind("/asell", instance.autoSell)
 mq.bind("/bitem", instance.bankThisItem)
@@ -664,6 +745,7 @@ mq.bind("/scaninv", instance.scanInventory)
 mq.bind("/sinventory", instance.syncInventory)
 mq.bind("/sitem", instance.sellThisItem)
 mq.bind("/skipitem", instance.skipThisItem)
+mq.bind("/sortlootfile", instance.sortLootFile)
 mq.bind("/syncbank", instance.syncBank)
 mq.bind("/xitem", instance.dropThisItem)
 
@@ -673,7 +755,7 @@ while(loopBoolean)
 do
     mq.doevents()
     mq.delay(1) -- just yield the frame every loop
-    if(os.clock() - startTime > scriptRunTime) then
+    if((os.clock() - startTime > instance.scriptRunTime) and (instance.scriptRunTime ~= 0 )) then
         loopBoolean = false
     end
 end
