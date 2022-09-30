@@ -179,6 +179,22 @@ function InvUtil.new()
         end
     end
 
+    function getAugmentCount(item)
+        local augmentCount = 0
+        
+        if((item.Augs() == 0) or (item.Container()>0)) then
+            return augmentCount
+        else
+            for i=1,item.Augs() do
+                if(item.Item(i).Name()) then
+                    augmentCount = augmentCount +1
+                end
+            end
+        end
+
+        return augmentCount
+    end
+
     function self.scanInventory()
         -- Scan inventory creates an array of the items in your inventory.  This serves a couple of purposes.
         -- When you sell an item to the vendor, we can get the details from this array rather than having to 
@@ -198,6 +214,7 @@ function InvUtil.new()
                         local lookup = {}
                         lookup.key = currentItem.Name()
                         lookup.ID = currentItem.ID()
+                        lookup.augmentCount = getAugmentCount(currentItem)
                         lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                         lookup.location = string.format("in pack%d %d", currentItem.ItemSlot()-22, currentItem.ItemSlot2() + 1)
                         local locations = {}
@@ -217,6 +234,7 @@ function InvUtil.new()
                     local lookup = {}
                     lookup.key = currentItem.Name()
                     lookup.ID = currentItem.ID()
+                    lookup.augmentCount = getAugmentCount(currentItem)
                     lookup.value = lsu.getIniKey(currentItem.Name(), currentItem.Value(), currentItem.StackSize(), currentItem.NoDrop(), currentItem.Lore())
                     lookup.location = string.format("%d", currentItem.ItemSlot())
                     local locations = {}
@@ -597,25 +615,29 @@ function InvUtil.new()
         for k1,v1 in pairs(self.inventoryArray) do
             local attempts = 0
 
-            for k2,v2 in pairs(v1.value) do
-                local lootSetting = lsu.getIniValue(v2) or "Nothing"
-                if(string.find(lootSetting, self.SELL)) then
-                    if mq.TLO.Window("MerchantWnd").Open() then
-                        for y=1,#v1.locations do
-                            print("Selling: ",v1.key," - ",v1.locations[y])
-                            if not printMode then
-                                attempts = 0
-                                while(not self.inventoryLocationEmpty(v1.locations[y]) and (attempts < 5))
-                                do
-                                    sellSingleItem(v1.locations[y],3)
-                                    attempts = attempts + 1
-                                    mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
+            if(v1.augmentCount == 0) then
+                for k2,v2 in pairs(v1.value) do
+                    local lootSetting = lsu.getIniValue(v2) or "Nothing"
+                    if(string.find(lootSetting, self.SELL)) then
+                        if mq.TLO.Window("MerchantWnd").Open() then
+                            for y=1,#v1.locations do
+                                print("Selling: ",v1.key," - ",v1.locations[y])
+                                if not printMode then
+                                    attempts = 0
+                                    while(not self.inventoryLocationEmpty(v1.locations[y]) and (attempts < 5))
+                                    do
+                                        sellSingleItem(v1.locations[y],3)
+                                        attempts = attempts + 1
+                                        mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
+                                    end
                                 end
                             end
+                            break
                         end
-                        break
                     end
                 end
+            else
+                print(string.format("Skipping: %s has %d augmentation(s)",v1.key, v1.augmentCount))
             end
         end
 
@@ -624,6 +646,7 @@ function InvUtil.new()
 
         self.autoDestroy(...)
         self.scanInventory()
+        mq.flushevents("event_soldItem")
         mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
     end
 
@@ -683,6 +706,10 @@ function InvUtil.new()
             self.lootSettingsIni = self.defaultLootSettingsIni
             os.exit()
         end
+    end
+
+    function self.windowOpenCallback(windowName)
+
     end
 
     -- returns true if inventory location is empty, otherwise it returns false if there is an item in the slot
