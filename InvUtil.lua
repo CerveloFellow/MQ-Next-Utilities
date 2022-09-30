@@ -549,10 +549,12 @@ function InvUtil.new()
 
     function openMerchant()
         local maxMerchantDistance = 500
+        local merchantId = mq.TLO.Spawn(string.format("Merchant radius %s los", maxMerchantDistance)).ID() or 0
         local merchant = mq.TLO.Spawn(string.format("Merchant radius %s los", maxMerchantDistance))
         local maxRetries = 8
         local attempt = 0
-        if (merchant.ID() == nil) then
+
+        if (merchantId==0) then
             print(string.format("There are no merchants within line of sight or %s units distance from you.", maxMerchantDistance))
             return false
         end
