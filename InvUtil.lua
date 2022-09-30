@@ -612,10 +612,15 @@ function InvUtil.new()
             return
         end
     
+        -- loops through all of your inventory array
         for k1,v1 in pairs(self.inventoryArray) do
             local attempts = 0
 
+            -- check if the item has augments inserted into it, if so skip it.  Probably going to have to make this
+            -- a function at some point to check for other things that might hold up selling
             if(v1.augmentCount == 0) then
+                -- we store multiple loot setting values(old algorithm versus new algorithm).  So iterate over all of the 
+                -- loot settings that we have to see if we have a match.
                 for k2,v2 in pairs(v1.value) do
                     local lootSetting = lsu.getIniValue(v2) or "Nothing"
                     if(string.find(lootSetting, self.SELL)) then
@@ -628,6 +633,9 @@ function InvUtil.new()
                                     do
                                         sellSingleItem(v1.locations[y],3)
                                         attempts = attempts + 1
+                                        -- sometimes selling things can take a long time depending on lag/latency.  putting in 
+                                        -- a 5s delay with a callback that checks the inventory slot that I just sold from.  If the 
+                                        -- inventory slot is empty, the delay stops early.
                                         mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
                                     end
                                 end
@@ -642,12 +650,15 @@ function InvUtil.new()
         end
 
         closeMerchant()
-        self.notAutoSelling = true
 
         self.autoDestroy(...)
         self.scanInventory()
-        mq.flushevents("event_soldItem")
         mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
+        -- before re-enabling autoselling, flush events and pause.  I would occasionally get errors because the autoSell event would
+        -- get triggered after re-enabling autosell
+        mq.flushevents("event_soldItem")
+        mq.delay("1s")
+        self.notAutoSelling = true
     end
 
     function self.autoDestroy(...)
