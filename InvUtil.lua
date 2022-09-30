@@ -165,7 +165,7 @@ function InvUtil.new()
             local id = self.dropArray[v.ID]
             if(self.dropArray[v.ID]) then
                 for i=1,#v.locations do
-                    mq.cmdf("/itemnotify %s leftmouseup", v.locations[i])
+                    mq.cmdf("/shiftkey /itemnotify %s leftmouseup", v.locations[i])
                     mq.delay(self.COMMANDDELAY)
                     while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
                         clickAttempts = clickAttempts + 1
@@ -392,7 +392,7 @@ function InvUtil.new()
     end
 
     function self.itemSold(line, merchantName, itemName)
-        if(self.enableItemSoldEvent and self.notAutoSelling) then
+        if(self.enableItemSoldEvent and self.notAutoSelling and self.inventoryArray[itemName]) then
             local lsu = LootSettingUtil.new(self.lootSettingsIni)
             local lootIniKey = self.inventoryArray[itemName].value
             lsu.setIniValue(lootIniKey[1], self.SELL)
@@ -401,7 +401,7 @@ function InvUtil.new()
     end
 
     function bankSingleItem(location, maxClickAttempts)
-        mq.cmdf("/itemnotify %s leftmouseup", location)
+        mq.cmdf("/shiftkey /itemnotify %s leftmouseup", location)
         mq.delay(self.COMMANDDELAY)
         if(mq.TLO.Window("BigBankWnd").Child("BIGB_AutoButton").Enabled()) then
             mq.cmdf("/notify BigBankWnd BIGB_AutoButton leftmouseup")
@@ -417,7 +417,7 @@ function InvUtil.new()
             -- Something went wrong trying to autobank it.  Put item bank where you found it.
             if(mq.TLO.Cursor) then
                 print(string.format("Unable to bank %s.  Check if you have available bank space and that the item is not No Storage", mq.TLO.Cursor.Name()))
-                mq.cmdf("/itemnotify %s leftmouseup", location)
+                mq.cmdf("/shiftkey /itemnotify %s leftmouseup", location)
                 mq.delay(self.COMMANDDELAY)
             end
         end
@@ -513,7 +513,7 @@ function InvUtil.new()
         mq.cmdf("/itemnotify %s leftmouseup", location)
         mq.delay(self.COMMANDDELAY)
         if(mq.TLO.Window("MerchantWnd").Child("MW_Sell_Button").Enabled()) then
-            mq.cmdf("/notify MerchantWnd MW_Sell_Button leftmouseup")
+            mq.cmdf("/shiftkey /notify MerchantWnd MW_Sell_Button leftmouseup")
             mq.delay(self.COMMANDDELAY)
             local clickAttempts = 1
             while mq.TLO.Window("QuantityWnd").Open() and clickAttempts < maxClickAttempts do
@@ -526,7 +526,7 @@ function InvUtil.new()
     
     function destroySingleItem(location, maxClickAttempts)
         -- put the item on the cursor
-        mq.cmdf("/itemnotify %s leftmouseup", location)
+        mq.cmdf("/shiftkey /itemnotify %s leftmouseup", location)
         mq.delay(self.COMMANDDELAY)
         
         local clickAttempts = 1

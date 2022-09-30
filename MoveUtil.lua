@@ -32,7 +32,7 @@ function MoveUtil.new (propertiesTable)
     local arrivalDistance
 
     if mq.TLO.Plugin("MQ2MoveUtils").IsLoaded() or mq.TLO.Plugin("MQ2Nav").IsLoaded() then
-        self.target = propertiesTable.target
+        self.target = propertiesTable.target or nil
         self.X = propertiesTable.target==nil and propertiesTable.X or tonumber(tostring(propertiesTable.target.X))
         self.Y = propertiesTable.target==nil and propertiesTable.Y or tonumber(tostring(propertiesTable.target.Y))
         self.Z = propertiesTable.target==nil and propertiesTable.Z or tonumber(tostring(propertiesTable.target.Z))
@@ -84,7 +84,7 @@ function MoveUtil.new (propertiesTable)
     end
 
     -- Am I within <arrivalDistance> of my destination?
-    function atDestion()
+    function self.atDestion()
         return self.distanceFromDestination() <= tonumber(self.arrivalDistance)
     end
 
@@ -101,7 +101,7 @@ function MoveUtil.new (propertiesTable)
         mq.delay(string.format("%s",self.timeToWait), moveCallback)
         mq.cmdf("/moveto off")
 
-        if not atDestion() then
+        if not self.atDestion() then
             print(string.format("Unable to move to destination within the time allocated(%s)", timeToWait))
         end
     end
