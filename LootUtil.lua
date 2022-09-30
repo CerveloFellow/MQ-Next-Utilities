@@ -65,9 +65,13 @@ function LootUtil.new()
             return
         end
 
-        local corpseItemCount = mq.TLO.Corpse.Items()
+        local corpseItemCount = tonumber(mq.TLO.Corpse.Items()) or 0
 
         if(corpseItemCount == 0) then
+            if(mq.TLO.Window("LootWnd").Open()) then
+                mq.cmdf("/notify LootWnd LW_DoneButton leftmouseup")
+                mq.delay(100)
+            end
             return
         end
 
@@ -83,7 +87,7 @@ function LootUtil.new()
             local corpseItem = mq.TLO.Corpse.Item(i)
 
             if(shouldILoot(corpseItem)) then
-                mq.cmdf("/itemnotify loot%d rightmouseup", i)
+                mq.cmdf("/shift /itemnotify loot%d rightmouseup", i)
                 mq.delay(500)
                 if(mq.TLO.Window("QuantityWnd").Open()) then
                     mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
@@ -157,7 +161,7 @@ function LootUtil.new()
         startingLocation.timeToWait="5s"
         startingLocation.arrivalDistance=5
 
-        if(mq.TLO.Twist.Twisting) then
+        if(mq.TLO.Twist.Twisting and mq.TLO.Me.Class.ShortName() == "BRD") then
             twistState = true
             mq.cmdf("/twist stop")
         end
@@ -183,13 +187,13 @@ function LootUtil.new()
             local moveProps = { Y=currentCorpse.Y, X=currentCorpse.X, Z=currentCorpse.Z, timeToWait="2s", arrivalDistance=8}
             local moveUtilInstance = MoveUtil.new(moveProps)
             moveUtilInstance.moveToLocation()        
-            mq.cmdf("/bc moving to %s", currentCorpse.Name)
             mq.delay(moveProps.timeToWait, moveUtilInstance.atDestion)
             if (moveUtilInstance.atDestion()) then
                 lootCorpse(currentCorpse.ID)
             else
                 print("You couldn't get to your target, moving on to next one.")
             end
+            mq.delay(500)
             currentCorpse = getNearestCorpse()
         end
 
