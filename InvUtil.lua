@@ -512,7 +512,8 @@ function InvUtil.new()
     function sellSingleItem(location, maxClickAttempts)
         mq.cmdf("/itemnotify %s leftmouseup", location)
         mq.delay(self.COMMANDDELAY)
-        if(mq.TLO.Window("MerchantWnd").Child("MW_Sell_Button").Enabled()) then
+        local itemValue = mq.TLO.Window("MerchantWnd").Child("MW_SelectedPriceLabel").Text()
+        if(mq.TLO.Window("MerchantWnd").Child("MW_Sell_Button").Enabled() and mq.TLO.Window("MerchantWnd").Child("MW_SelectedPriceLabel").Text() ~= "0c") then
             mq.cmdf("/shiftkey /notify MerchantWnd MW_Sell_Button leftmouseup")
             mq.delay(self.COMMANDDELAY)
             local clickAttempts = 1
@@ -522,6 +523,8 @@ function InvUtil.new()
                 mq.delay(self.COMMANDDELAY)
             end
         end
+
+        return itemValue
     end
     
     function destroySingleItem(location, maxClickAttempts)
@@ -606,6 +609,7 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
+        print(string.format("/bc Autosell started for %s", mq.TLO.Me.Name()))
         self.notAutoSelling = false
         self.scanInventory()
 
@@ -633,12 +637,16 @@ function InvUtil.new()
                                     attempts = 0
                                     while(not self.inventoryLocationEmpty(v1.locations[y]) and (attempts < 5))
                                     do
-                                        sellSingleItem(v1.locations[y],3)
+                                        local merchantOffer = sellSingleItem(v1.locations[y],3)
                                         attempts = attempts + 1
                                         -- sometimes selling things can take a long time depending on lag/latency.  putting in 
                                         -- a 5s delay with a callback that checks the inventory slot that I just sold from.  If the 
                                         -- inventory slot is empty, the delay stops early.
-                                        mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
+                                        if(string.sub(merchantOffer, 1, 2) == "0c") then
+                                            break
+                                        else
+                                            mq.delay("5s", function() return self.inventoryLocationEmpty(v1.locations[y]) end)
+                                        end
                                     end
                                 end
                             end
