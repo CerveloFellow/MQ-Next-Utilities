@@ -194,7 +194,7 @@ function LDONUtil.new()
     
     function self.anyMobsToLoot()
         if self.LootEnabled then
-            return (mq.TLO.SpawnCount(string.format("npc corpse zradius %d radius %d", self.ConfigurationSettings.LootRadius))() > 0)
+            return (mq.TLO.SpawnCount(string.format("npc corpse zradius 50 radius %d", self.ConfigurationSettings.LootRadius))() > 0)
         else
             return false
         end
@@ -286,6 +286,8 @@ do
                 instance.pause()
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
                 mq.delay("8s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) end)
+                mq.cmdf("/followme")
+                mq.delay(500)
                 instance.unpause()
             end
         end
