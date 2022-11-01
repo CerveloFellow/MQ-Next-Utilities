@@ -193,7 +193,7 @@ function LDONUtil.new()
     end
     
     function self.anyMobsToLoot()
-        if self.LootEnabled then
+        if self.ConfigurationSettings.LootEnabled then
             return (mq.TLO.SpawnCount(string.format("npc corpse zradius 50 radius %d", self.ConfigurationSettings.LootRadius))() > 0)
         else
             return false
@@ -299,9 +299,9 @@ do
                 print("In Combat... start fighting!")
                 mq.cmdf("/squelch /medoff")
                 mq.delay(1000)
-                mq.cmdf("/clearxtargets ForceOn")
-                mq.delay(500)
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
+                mq.delay(1000)
+                mq.cmdf("/clearxtargets ForceOn")
                 mq.delay("5s", function() return (not instance.inCombat()) end)
             elseif instance.anyMobsToLoot() then
                 print("Combat finished, time to loot!")
