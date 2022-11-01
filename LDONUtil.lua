@@ -239,6 +239,8 @@ if(#args > 0) then
     instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
 
+instance.initZone()
+
 -- Set up binds
 -- check adventure complete status
 mq.bind("/ac", instance.adventureComplete)
