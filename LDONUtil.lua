@@ -273,8 +273,10 @@ do
     local closestId = table.remove(instance.EntireZoneTable, tablePosition)
     if(mq.TLO.Navigation.PathExists(string.format("id %d", closestId))()) then
         mq.cmdf("/squelch /target id %d", closestId)
+        mq.delay(500)
         mq.cmdf("/squelch /nav id %d", closestId)
-        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active())
+        mq.delay(500)
+        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active() and mq.TLO.Me.XTarget() < instance.PullSize)
         do
             if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
@@ -293,7 +295,7 @@ do
         end
 
         -- If we're not active or paused check conditions to see if we need combat, looting or med
-        while(instance.Paused)
+        while(mq.TLO.Navigation.Paused())
         do
             if(instance.inCombat()) then
                 print("In Combat... start fighting!")
@@ -332,12 +334,14 @@ do
 
             if instance.adventureComplete() then
                 instance.LoopBoolean = false
+                break
             end
         end
     end
 
     if instance.adventureComplete() then
         instance.LoopBoolean = false
+        break
     end
 end
 
@@ -355,6 +359,5 @@ while(instance.inCombat()) do
 end
 
 print("Playback ended!")
-
 
 
