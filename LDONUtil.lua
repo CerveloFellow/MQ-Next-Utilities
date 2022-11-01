@@ -298,9 +298,9 @@ do
             if(instance.inCombat()) then
                 print("In Combat... start fighting!")
                 mq.cmdf("/squelch /medoff")
-                mq.delay(1000)
+                mq.delay(500)
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
-                mq.delay(1000)
+                mq.delay(500)
                 mq.cmdf("/clearxtargets ForceOn")
                 mq.delay("5s", function() return (not instance.inCombat()) end)
             elseif instance.anyMobsToLoot() then
@@ -309,8 +309,8 @@ do
                 mq.delay("15s", function() return (instance.inCombat() or (not instance.anyMobsToLoot())) end)
             elseif instance.needToMed() and instance.LoopBoolean then
                 print("Done Looting, we need to med!")
-                mq.delay("2s")
                 mq.cmdf("/squelch /stop")
+                mq.delay(500)
                 mq.cmdf("/squelch /medon")
                 mq.delay("20s", function() return (instance.inCombat() or (not instance.needToMed())) end)
                 if not instance.needToMed() then
@@ -322,10 +322,10 @@ do
             else
                 print("Resume play.")
                 if not instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) then
-                    mq.cmdf("/squelch /followme")
                     mq.delay(500)
                     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
                     mq.delay("15s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) end)
+                    mq.cmdf("/squelch /followme")                    
                 end
                 instance.unpause()
             end
@@ -348,14 +348,13 @@ while(instance.inCombat()) do
     print("In Combat... start fighting!")
     mq.cmdf("/squelch /medoff")
     mq.delay(500)
-    mq.cmdf("/clearxtargets ForceOn")
-    mq.delay(500)
     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
+    mq.delay(500)
+    mq.cmdf("/clearxtargets ForceOn")
     mq.delay("5s", function() return (not instance.inCombat()) end)
 end
 
 print("Playback ended!")
-
 
 
 
