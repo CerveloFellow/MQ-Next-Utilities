@@ -153,7 +153,13 @@ function LDONUtil.new()
     
             return (progressTable[1] == progressTable[2])
         else
-            if self.AdventerTotal > 0 then
+            print(string.format("AdvRqst_NPCLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_NPCLabel").Text()))
+            print(string.format("AdvRqst_NPCText: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_NPCText").Text()))
+            print(string.format("AdvRqst_EnterTimeLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_EnterTimeLabel").Text()))
+            print(string.format("AdvRqst_EnterTimeLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_CompleteTimeLeftLabel").Text()))
+            print(string.format("AdvRqst_ProgressTextLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()))
+            
+            if self.AdventerTotal > (self.AdventureTotalNeeded * .90) then
                 return true
             end
         end
@@ -273,10 +279,10 @@ do
     local closestId = table.remove(instance.EntireZoneTable, tablePosition)
     if(mq.TLO.Navigation.PathExists(string.format("id %d", closestId))()) then
         mq.cmdf("/squelch /target id %d", closestId)
-        mq.delay(500)
+        mq.delay(100)
         mq.cmdf("/squelch /nav id %d", closestId)
-        mq.delay(500)
-        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active() and mq.TLO.Me.XTarget() < instance.ConfigurationSettings.PullSize)
+        mq.delay(100)
+        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active())
         do
             if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
