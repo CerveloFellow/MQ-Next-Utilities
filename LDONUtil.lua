@@ -276,7 +276,7 @@ do
         mq.delay(500)
         mq.cmdf("/squelch /nav id %d", closestId)
         mq.delay(500)
-        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active() and mq.TLO.Me.XTarget() < instance.PullSize)
+        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active() and mq.TLO.Me.XTarget() < instance.ConfigurationSettings.PullSize)
         do
             if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
