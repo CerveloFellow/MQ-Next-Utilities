@@ -300,7 +300,7 @@ do
                 mq.cmdf("/squelch /medoff")
                 mq.delay(500)
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
-                mq.delay(500)
+                mq.delay("3s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) end)
                 mq.cmdf("/clearxtargets ForceOn")
                 mq.delay("5s", function() return (not instance.inCombat()) end)
             elseif instance.anyMobsToLoot() then
@@ -349,7 +349,7 @@ while(instance.inCombat()) do
     mq.cmdf("/squelch /medoff")
     mq.delay(500)
     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
-    mq.delay(500)
+    mq.delay("3s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) end)
     mq.cmdf("/clearxtargets ForceOn")
     mq.delay("5s", function() return (not instance.inCombat()) end)
 end
