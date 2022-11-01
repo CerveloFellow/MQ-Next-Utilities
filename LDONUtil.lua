@@ -122,7 +122,6 @@ function LDONUtil.new()
     end
 
     function self.initZone()
-        print("hello world")
         local filteredSpawns = mq.getFilteredSpawns(spawnFilter)
 
         for index, spawn in ipairs(filteredSpawns) do
@@ -304,7 +303,7 @@ do
             elseif instance.anyMobsToLoot() then
                 print("Combat finished, time to loot!")
                 mq.cmdf("/squelch /bc loot on")
-                mq.delay("10s", function() return (instance.inCombat() or (not instance.anyMobsToLoot())) end)
+                mq.delay("15s", function() return (instance.inCombat() or (not instance.anyMobsToLoot())) end)
             elseif instance.needToMed() and instance.LoopBoolean then
                 print("Done Looting, we need to med!")
                 mq.delay("2s")
@@ -320,6 +319,8 @@ do
             else
                 print("Resume play.")
                 if not instance.everyoneHere(instance.ConfigurationSetings.MinFollowDistance * 2) then
+                    mq.cmdf("/squelch /followme")
+                    mq.delay(500)
                     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
                     mq.delay("15s", function() return instance.everyoneHere(instance.ConfigurationSetings.MinFollowDistance * 2) end)
                 end
