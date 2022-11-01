@@ -609,7 +609,7 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
-        print(string.format("/bc Autosell started for %s", mq.TLO.Me.Name()))
+        mq.cmdf("/bc Autosell started for %s", mq.TLO.Me.Name())
         self.notAutoSelling = false
         self.scanInventory()
 
