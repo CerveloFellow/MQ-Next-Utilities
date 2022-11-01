@@ -1,5 +1,13 @@
 local mq = require('mq')
+--[[
+    LDON Utility to help automate running LDON collect/kill adventures.
 
+    Runs on the MQ Next version of E3 and required the MQ2Nav plugin.
+
+    A modification to the /clearxtargets is needed so you can force it on.  Grab the version of e3_ClearXTargets.inc in this repo.
+
+    For collect adventures you need to have your auto loot set up to pick up the LDON collect items automatically.  /bc loot on is called after combat to make your mobs loot. 
+]]
 LDONUtil = {}
 
 function LDONUtil.new()
