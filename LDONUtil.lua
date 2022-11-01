@@ -20,41 +20,41 @@ function LDONUtil.new()
     self.EntireZoneTable = {}
     self.DistinctMobsTable = {}
     self.INI = mq.TLO.MacroQuest.Path("Config")().."\\LDONUtil.ini"
-    self.ConfigurationSetings = {}
+    self.ConfigurationSettings = {}
     -- General Settings
     -- This is a list of spawns to ignore if you come across them
-    self.ConfigurationSetings.InvalidSpawns = "A Dark Coffin,A Bitten Victim,A Dark Chest,A Wooden Barrel,a hollow tree,a creaking crate,an orcish chest,a petrified colossal tree,a hollow tree,a menacing tree spirit"
+    self.ConfigurationSettings.InvalidSpawns = "A Dark Coffin,A Bitten Victim,A Dark Chest,A Wooden Barrel,a hollow tree,a creaking crate,an orcish chest,a petrified colossal tree,a hollow tree,a menacing tree spirit"
     -- The maximum distance for an xtarget hater to be considered in combat.   Mobs outside of this distance will not consider you in combat.
-    self.ConfigurationSetings.CombatRadius = 200
+    self.ConfigurationSettings.CombatRadius = 200
     -- Should we loot?
-    self.ConfigurationSetings.LootEnabled = true
+    self.ConfigurationSettings.LootEnabled = true
     -- Maximum radius to look for and loot corpses
-    self.ConfigurationSetings.LootRadius = 50
+    self.ConfigurationSettings.LootRadius = 50
     -- When members are further than this distance we will pause and wait for them to catch up 
-    self.ConfigurationSetings.MaxFollowDistance = 250
+    self.ConfigurationSettings.MaxFollowDistance = 250
     -- When paused, we resume navigation when team members are within this range
-    self.ConfigurationSetings.MinFollowDistance = 50
+    self.ConfigurationSettings.MinFollowDistance = 50
     
     -- Character Level Settings
     -- This is the pull size to stop and fight.  This does not guarantee this pull size, only says that when we get a minimum of this many mobs on xtarget haters list, in combat range, we stop and fight
-    self.ConfigurationSetings.PullSize = 3
+    self.ConfigurationSettings.PullSize = 3
     -- Minimum mana needed to fight, otherwise we med after fights
-    self.ConfigurationSetings.MinMana = 50
+    self.ConfigurationSettings.MinMana = 50
     -- If you're not in combat and navigating to a mob, you will stop and fight if anyone in the group drops below this hit point threshold
-    self.ConfigurationSetings.MinHealth = 70
+    self.ConfigurationSettings.MinHealth = 70
 
     function self.createIniDefaults()
         if not mq.TLO.Ini.File(self.INI).Exists() then
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Invalid Spawns", self.ConfigurationSetings.InvalidSpawns)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Combat Radius", self.ConfigurationSetings.CombatRadius)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Enabled", self.ConfigurationSetings.LootEnabled)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Radius", self.ConfigurationSetings.LootRadius)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Maximum Follow Distance", self.ConfigurationSetings.MaxFollowDistance)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Minimum Follow Distance", self.ConfigurationSetings.MinFollowDistance)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Invalid Spawns", self.ConfigurationSettings.InvalidSpawns)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Combat Radius", self.ConfigurationSettings.CombatRadius)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Enabled", self.ConfigurationSettings.LootEnabled)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance)
 
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSetings.PullSize)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSetings.MinMana)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSetings.MinHealth)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
 
         end
     end
@@ -77,22 +77,22 @@ function LDONUtil.new()
         if not mq.TLO.Ini.File(self.INI).Exists() then
             self.createIniDefaults()
         else
-            self.ConfigurationSetings.InvalidSpawns = getKey(self.INI, "General", "Invalid Spawns", self.ConfigurationSetings.InvalidSpawns)
-            self.ConfigurationSetings.CombatRadius = tonumber(getKey(self.INI, "General", "Combat Radius", self.ConfigurationSetings.CombatRadius))
-            self.ConfigurationSetings.LootEnabled = stringtoboolean[getKey(self.INI, "General", "Loot Enabled", self.ConfigurationSetings.LootEnabled)]
-            self.ConfigurationSetings.LootRadius = tonumber(getKey(self.INI, "General", "Loot Radius", self.ConfigurationSetings.LootRadius))
-            self.ConfigurationSetings.MaxFollowDistance = tonumber(getKey(self.INI, "General", "Maximum Follow Distance", self.ConfigurationSetings.MaxFollowDistance))
-            self.ConfigurationSetings.MinFollowDistance = tonumber(getKey(self.INI, "General", "Minimum Follow Distance", self.ConfigurationSetings.MinFollowDistance))
+            self.ConfigurationSettings.InvalidSpawns = getKey(self.INI, "General", "Invalid Spawns", self.ConfigurationSettings.InvalidSpawns)
+            self.ConfigurationSettings.CombatRadius = tonumber(getKey(self.INI, "General", "Combat Radius", self.ConfigurationSettings.CombatRadius))
+            self.ConfigurationSettings.LootEnabled = stringtoboolean[getKey(self.INI, "General", "Loot Enabled", self.ConfigurationSettings.LootEnabled)]
+            self.ConfigurationSettings.LootRadius = tonumber(getKey(self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius))
+            self.ConfigurationSettings.MaxFollowDistance = tonumber(getKey(self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance))
+            self.ConfigurationSettings.MinFollowDistance = tonumber(getKey(self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance))
         end
 
         if not mq.TLO.Ini.File(self.INI).Section(mq.TLO.Me.Name()).Exists() then
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSetings.PullSize)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSetings.MinMana)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSetings.MinHealth)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
         else
-            self.ConfigurationSetings.PullSize = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSetings.LootRadius))
-            self.ConfigurationSetings.MinMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSetings.MinMana))
-            self.ConfigurationSetings.MinHealth = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSetings.MinHealth))
+            self.ConfigurationSettings.PullSize = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.LootRadius))
+            self.ConfigurationSettings.MinMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana))
+            self.ConfigurationSettings.MinHealth = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth))
         end
     end
 
@@ -102,7 +102,7 @@ function LDONUtil.new()
 
     function invalidSpawn(spawn)
     
-        for invalidSpawn in string.gmatch(self.ConfigurationSetings.InvalidSpawns, '([^,]+)') do
+        for invalidSpawn in string.gmatch(self.ConfigurationSettings.InvalidSpawns, '([^,]+)') do
             local currentSpawnName = string.upper(spawn.CleanName())
             local comparisonSpawnName = string.upper(invalidSpawn)
             if currentSpawnName == comparisonSpawnName then
@@ -163,7 +163,7 @@ function LDONUtil.new()
     
     function self.inCombat()
         local invalidSpawnCount = 0
-        local spawnCount = mq.TLO.SpawnCount(string.format("xtarhater radius %d", self.ConfigurationSetings.CombatRadius))()
+        local spawnCount = mq.TLO.SpawnCount(string.format("xtarhater radius %d", self.ConfigurationSettings.CombatRadius))()
         local xTargetCount = mq.TLO.Me.XTarget()
     
         for i=1,xTargetCount do
@@ -181,7 +181,7 @@ function LDONUtil.new()
     
     function self.needToMed()
         -- check for slowed because Stonewall Discipline triggers and messes me up
-        return (mq.TLO.Group.LowMana(self.ConfigurationSetings.MinMana)() > 0)
+        return (mq.TLO.Group.LowMana(self.ConfigurationSettings.MinMana)() > 0)
     end
     
     function self.everyoneHere(distance)
@@ -236,10 +236,9 @@ instance.getIniSettings()
 
 -- You can override your pull size by doing /lua run LDONUtil.lua <pullsize>.
 if(#args > 0) then
-    instance.ConfigurationSetings.PullSize = tonumber(args[1])
+    instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
 
-instance.initZone()
 -- Set up binds
 -- check adventure complete status
 mq.bind("/ac", instance.adventureComplete)
@@ -275,16 +274,16 @@ do
         mq.cmdf("/squelch /nav id %d", closestId)
         while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active())
         do
-            if mq.TLO.Me.XTarget() >= instance.ConfigurationSetings.PullSize then
+            if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
-            elseif not instance.everyoneHere(instance.ConfigurationSetings.MaxFollowDistance) and mq.TLO.Me.XTarget() >= (instance.ConfigurationSetings.PullSize / 2) then
+            elseif not instance.everyoneHere(instance.ConfigurationSettings.MaxFollowDistance) and mq.TLO.Me.XTarget() >= (instance.ConfigurationSettings.PullSize / 2) then
                 instance.pause()
-            elseif instance.anyoneInjured(instance.ConfigurationSetings.MinHealth) then
+            elseif instance.anyoneInjured(instance.ConfigurationSettings.MinHealth) then
                 instance.pause()
-            elseif not instance.everyoneHere(instance.ConfigurationSetings.MaxFollowDistance) then
+            elseif not instance.everyoneHere(instance.ConfigurationSettings.MaxFollowDistance) then
                 instance.pause()
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
-                mq.delay("8s", function() return instance.everyoneHere(instance.ConfigurationSetings.MinFollowDistance) end)
+                mq.delay("8s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) end)
                 instance.unpause()
             end
         end
@@ -318,11 +317,11 @@ do
                 end
             else
                 print("Resume play.")
-                if not instance.everyoneHere(instance.ConfigurationSetings.MinFollowDistance * 2) then
+                if not instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) then
                     mq.cmdf("/squelch /followme")
                     mq.delay(500)
                     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
-                    mq.delay("15s", function() return instance.everyoneHere(instance.ConfigurationSetings.MinFollowDistance * 2) end)
+                    mq.delay("15s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) end)
                 end
                 instance.unpause()
             end
