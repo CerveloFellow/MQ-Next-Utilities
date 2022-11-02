@@ -298,7 +298,7 @@ do
         mq.delay(100)
         mq.cmdf("/squelch /nav id %d", closestId)
         mq.delay(100)
-        while(not mq.TLO.Navigation.Paused() and mq.TLO.Navigation.Active())
+        while(not instance.Paused and mq.TLO.Navigation.Active())
         do
             if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
@@ -317,7 +317,7 @@ do
         end
 
         -- If we're not active or paused check conditions to see if we need combat, looting or med
-        while(mq.TLO.Navigation.Paused())
+        while(instance.Paused)
         do
             if(instance.inCombat()) then
                 print("In Combat... start fighting!")
