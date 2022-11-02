@@ -139,6 +139,13 @@ function LDONUtil.new()
     
         print(string.format("%d of %d", self.AdventerTotal, self.AdventureTotalNeeded))
     
+        while(string.len(progressText)==0) do
+            mq.cmdf("/keypress alt+v")
+            progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
+            mq.cmdf("/keypress alt+v")
+            mq.delay(1000)
+        end
+
         if string.len(progressText) > 0 then
             for progress in string.gmatch(progressText, '([^of]+)') do
                 table.insert(progressTable, tonumber(progress))
@@ -153,15 +160,20 @@ function LDONUtil.new()
     
             return (progressTable[1] == progressTable[2])
         else
-            print(string.format("AdvRqst_NPCLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_NPCLabel").Text()))
-            print(string.format("AdvRqst_NPCText: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_NPCText").Text()))
-            print(string.format("AdvRqst_EnterTimeLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_EnterTimeLabel").Text()))
-            print(string.format("AdvRqst_EnterTimeLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_CompleteTimeLeftLabel").Text()))
-            print(string.format("AdvRqst_ProgressTextLabel: %s", mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()))
-            
-            if self.AdventerTotal > (self.AdventureTotalNeeded * .90) then
-                return true
+            mq.TLO.Window("AdventureRequestWnd").DoOpen()
+            progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
+            mq.TLO.Window("AdventureRequestWnd").DoClose()
+
+            for progress in string.gmatch(progressText, '([^of]+)') do
+                table.insert(progressTable, tonumber(progress))
             end
+            if(self.AdventureTotalNeeded == -1) then
+                self.AdventureTotalNeeded = progressTable[2]
+            end
+    
+            self.AdventerTotal = progressTable[1]
+
+            return (tonumber(progressTable[1]) == self.AdventureTotalNeeded)
         end
         
         return false
@@ -234,6 +246,8 @@ function LDONUtil.new()
 
     return self
 end
+
+local startTime = os.clock()
 local args = {...}
 
 local instance = LDONUtil.new()
@@ -253,6 +267,8 @@ mq.bind("/ac", instance.adventureComplete)
 -- print mobs in zone
 mq.bind("/pmiz", instance.printMobsInZone)
 
+mq.cmdf("/bcga //removelev")
+mq.delay(200)
 mq.cmdf("/bc loot on")
 mq.delay(500)
 mq.cmdf("/lootall")
@@ -277,7 +293,7 @@ do
     end
     
     local closestId = table.remove(instance.EntireZoneTable, tablePosition)
-    if(mq.TLO.Navigation.PathExists(string.format("id %d", closestId))()) then
+    if(mq.TLO.Navigation.PathExists(string.format("id %d", closestId))() and not instance.adventureComplete()) then
         mq.cmdf("/squelch /target id %d", closestId)
         mq.delay(100)
         mq.cmdf("/squelch /nav id %d", closestId)
@@ -365,5 +381,6 @@ while(instance.inCombat()) do
 end
 
 print("Playback ended!")
+print(string.format("Run time was %d seconds", os.clock() - startTime))
 
 
