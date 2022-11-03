@@ -12,6 +12,7 @@ LDONUtil = {}
 
 function LDONUtil.new()
     local self = {}
+    self.HighScoreEligible = false
     self.Paused = false
     self.LoopBoolean = true
     self.AdventerTotal = -1
@@ -96,6 +97,14 @@ function LDONUtil.new()
         end
     end
 
+    function self.setHighScore(score)
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), mq.TLO.Zone.ShortName(), score)
+    end
+
+    function self.getHighScore()
+        return tonumber(getKey(self.INI, mq.TLO.Me.Name(), mq.TLO.Zone.ShortName(), "10800"))
+    end
+
     function spawnFilter(spawn)
         return (spawn.Type() == "NPC") and (not invalidSpawn(spawn)) and spawn.Targetable() and not spawn.Dead() and not spawn.Trader()
     end
@@ -129,6 +138,19 @@ function LDONUtil.new()
             if not self.DistinctMobsTable[spawn.CleanName()] then
                 self.DistinctMobsTable[spawn.CleanName()] = spawn
             end
+        end
+    end
+
+    function self.checkEligibility()
+        local progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
+        local progressTable = {}
+
+        if string.len(progressText) > 0 then
+            for progress in string.gmatch(progressText, '([^of]+)') do
+                table.insert(progressTable, tonumber(progress))
+            end
+
+            self.HighScoreEligible = tonumber(progressTable[1] == 0)
         end
     end
 
@@ -259,6 +281,8 @@ if(#args > 0) then
     instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
 
+
+instance.checkEligibility()
 instance.initZone()
 
 -- Set up binds
@@ -381,6 +405,19 @@ while(instance.inCombat()) do
 end
 
 print("Playback ended!")
+
+local currentScore = math.ceil(os.clock() - startTime)
+print(string.format("Run time was %d seconds", currentScore))
+
+local highScore = instance.getHighScore()
+
+if (currentScore < highScore) and instance.HighScoreEligible then
+    print(string.format("Old High Score for %s: %d", mq.TLO.Zone.ShortName(), highScore))
+    print(string.format("New high score for %s!!! ---=== %d ===---", mq.TLO.Zone.ShortName(), currentScore))
+    instance.setHighScore(currentScore)
+end
+
 print(string.format("Run time was %d seconds", os.clock() - startTime))
+
 
 
