@@ -5,6 +5,7 @@ Utilities I've written for Everquest(Project Lazarus) MacroQuest Next
 **MoveUtil.lua** - provides some utilities for using MQ2MoveUtils and MQ2Nav navigate to targets and locations.  This is a library included in other files below.  
 **LootSettingUtil.lua** - provides some utilities for managing the Loot Settings.ini file. This is a library included in other files below.  
 **InvUtil.lua** - Inventory utilities that provides some slash commands to help manage inventory and banking.  
+**LDONUtil.lua** - LDON Utility to automatically try and run LDON collect/kill adventures.
 
 # Usage
 To use with Project Lazarus, download these files into your E3_RoF2\lua folder.  
