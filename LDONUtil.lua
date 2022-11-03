@@ -150,7 +150,7 @@ function LDONUtil.new()
                 table.insert(progressTable, tonumber(progress))
             end
 
-            self.HighScoreEligible = tonumber(progressTable[1] == 0)
+            self.HighScoreEligible = tonumber(progressTable[1]) == 0
         end
     end
 
@@ -281,7 +281,6 @@ if(#args > 0) then
     instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
 
-
 instance.checkEligibility()
 instance.initZone()
 
@@ -405,7 +404,6 @@ while(instance.inCombat()) do
 end
 
 print("Playback ended!")
-
 local currentScore = math.ceil(os.clock() - startTime)
 print(string.format("Run time was %d seconds", currentScore))
 
@@ -416,8 +414,5 @@ if (currentScore < highScore) and instance.HighScoreEligible then
     print(string.format("New high score for %s!!! ---=== %d ===---", mq.TLO.Zone.ShortName(), currentScore))
     instance.setHighScore(currentScore)
 end
-
-print(string.format("Run time was %d seconds", os.clock() - startTime))
-
 
 
