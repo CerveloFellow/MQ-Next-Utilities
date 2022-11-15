@@ -187,7 +187,10 @@ function SpawnWatch.new()
                 end
     
                 if self.CurrentIndex > 0 then
-                    mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
+                    if not mq.TLO.Target() then
+                        mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
+                        self.CurrentIndex = 0
+                    end
                 end
             end
             ImGui.ListBoxFooter()
