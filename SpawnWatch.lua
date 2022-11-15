@@ -121,7 +121,7 @@ function SpawnWatch.new()
         for key, value in pairs(self.WatchTable) do
             i,j = string.find(string.upper(spawn.CleanName()), string.upper(value))
             if i then
-                returnVal = true and (spawn.Type() == "NPC") and not spawn.Dead() and not spawn.Trader()
+                returnVal = true and (spawn.Type() == "NPC") and not spawn.Dead()
             end
         end
         return returnVal
@@ -180,13 +180,6 @@ function SpawnWatch.new()
                 bSelected = (i == self.CurrentIndex)
                 if ImGui.Selectable(selectableText, bSelected) then
                     self.CurrentIndex = i
-                end
-
-                if bSelected then
-                    ImGui.SetItemDefaultFocus()
-                end
-    
-                if self.CurrentIndex > 0 then
                     if not mq.TLO.Target() then
                         mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
                         self.CurrentIndex = 0
