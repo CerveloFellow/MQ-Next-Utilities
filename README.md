@@ -5,8 +5,8 @@ Utilities I've written for Everquest(Project Lazarus) MacroQuest Next
 **MoveUtil.lua** - provides some utilities for using MQ2MoveUtils and MQ2Nav navigate to targets and locations.  This is a library included in other files below.  
 **LootSettingUtil.lua** - provides some utilities for managing the Loot Settings.ini file. This is a library included in other files below.  
 **InvUtil.lua** - Inventory utilities that provides some slash commands to help manage inventory and banking.  
-**LDONUtil.lua** - LDON Utility to automatically try and run LDON collect/kill adventures.  For use with E3.  Get the version of clearXTargets here for it to work properly.
-**SpawnWath.lua*** - Windowed Spawn Watcher.  Add spawns you want to watch for to the INI and they show up in the window as the spawn.   The Trakanon INI example is a specific example for a spawn group; in this case Doom's spawn gorup.   Kill everything that pops up and you'll get Doom to spawn eventually.
+**LDONUtil.lua** - LDON Utility to automatically try and run LDON collect/kill adventures.  For use with E3.  Get the version of clearXTargets here for it to work properly.  
+**SpawnWatch.lua*** - Windowed Spawn Watcher.  Add spawns you want to watch for to the INI and they show up in the window as the spawn.   The Trakanon INI example is a specific example for a spawn group; in this case Doom's spawn gorup.   Kill everything that pops up and you'll get Doom to spawn eventually.
 
 # Usage
 To use with Project Lazarus, download these files into your E3_RoF2\lua folder.  
