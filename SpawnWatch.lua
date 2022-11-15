@@ -172,18 +172,13 @@ function SpawnWatch.new()
     
         if ImGui.ListBoxHeader("", self.ConfigurationSettings.WindowWidth, self.ConfigurationSettings.WindowHeight) then
             local lbSize = #self.SpawnTable
-            local bSelected = false
             for i=1,lbSize do
                 local ls = self.SpawnTable[i]
 
                 local selectableText = string.format("%s(%d) - %d", ls.Name(), ls.Level(), ls.Distance())
-                bSelected = (i == self.CurrentIndex)
-                if ImGui.Selectable(selectableText, bSelected) then
+                if ImGui.Selectable(selectableText, false) then
                     self.CurrentIndex = i
-                    if not mq.TLO.Target() then
-                        mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
-                        self.CurrentIndex = 0
-                    end
+                    mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
                 end
             end
             ImGui.ListBoxFooter()
