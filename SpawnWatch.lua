@@ -219,7 +219,6 @@ function SpawnWatch.new()
             print("/spawnwatch reload - reloads the watch table from the INI")
             print("/spawnwatch first - targets the first entry in the list")
         end
-        local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
     end
 
     return self
