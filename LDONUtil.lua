@@ -24,13 +24,13 @@ function LDONUtil.new()
     self.ConfigurationSettings = {}
     -- General Settings
     -- This is a list of spawns to ignore if you come across them
-    self.ConfigurationSettings.InvalidSpawns = "A Dark Coffin,A Bitten Victim,A Dark Chest,A Wooden Barrel,a hollow tree,a creaking crate,an orcish chest,a petrified colossal tree,a hollow tree,a menacing tree spirit"
+    self.ConfigurationSettings.InvalidSpawns = "a frozen table,A Dark Coffin,A Bitten Victim,A Dark Chest,A Wooden Barrel,a hollow tree,a creaking crate,an orcish chest,a petrified colossal tree,a hollow tree,a menacing tree spirit"
     -- The maximum distance for an xtarget hater to be considered in combat.   Mobs outside of this distance will not consider you in combat.
     self.ConfigurationSettings.CombatRadius = 200
     -- Should we loot?
     self.ConfigurationSettings.LootEnabled = true
     -- Maximum radius to look for and loot corpses
-    self.ConfigurationSettings.LootRadius = 50
+    self.ConfigurationSettings.LootRadius = 75
     -- When members are further than this distance we will pause and wait for them to catch up 
     self.ConfigurationSettings.MaxFollowDistance = 250
     -- When paused, we resume navigation when team members are within this range
@@ -43,6 +43,8 @@ function LDONUtil.new()
     self.ConfigurationSettings.MinMana = 50
     -- If you're not in combat and navigating to a mob, you will stop and fight if anyone in the group drops below this hit point threshold
     self.ConfigurationSettings.MinHealth = 70
+    --- COTH item/spell if group members get stuck
+    self.ConfigurationSettings.COTH = ""
 
     function self.createIniDefaults()
         if not mq.TLO.Ini.File(self.INI).Exists() then
@@ -56,6 +58,8 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+
 
         end
     end
@@ -90,10 +94,12 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
         else
             self.ConfigurationSettings.PullSize = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.LootRadius))
             self.ConfigurationSettings.MinMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana))
             self.ConfigurationSettings.MinHealth = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth))
+            self.ConfigurationSettings.COTH = getKey(self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
         end
     end
 
@@ -150,7 +156,7 @@ function LDONUtil.new()
                 table.insert(progressTable, tonumber(progress))
             end
 
-            self.HighScoreEligible = tonumber(progressTable[1] == 0)
+            self.HighScoreEligible = tonumber(progressTable[1]) == 0
         end
     end
 
@@ -266,6 +272,27 @@ function LDONUtil.new()
         self.Paused = false
     end
 
+    function self.COTH(maxDistance)
+        local castoruse = "useitem"
+
+        if self.ConfigurationSettings.COTH ~= "" then
+            i,j = string.find(string.upper("Call of the Heroes"), string.upper(self.ConfigurationSettings.COTH))
+            if i then
+                castoruse = "cast"
+            end
+
+            local groupSize = mq.TLO.Group.GroupSize() -1
+            for i=1,groupSize do
+                if mq.TLO.Group.Member(i).Spawn.Distance() > maxDistance then
+                    mq.cmdf("/target id %d", mq.TLO.Group.Member(i).Spawn.ID())
+                    mq.delay(100)
+                    mq.cmdf('/%s "%s"',castoruse, self.ConfigurationSettings.COTH)
+                    mq.delay("16s")
+                end
+            end
+        end
+    end
+
     return self
 end
 
@@ -280,7 +307,6 @@ instance.getIniSettings()
 if(#args > 0) then
     instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
-
 
 instance.checkEligibility()
 instance.initZone()
@@ -334,6 +360,9 @@ do
                 instance.pause()
                 mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
                 mq.delay("8s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) end)
+                if not instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance) then
+                    instance.COTH(instance.ConfigurationSettings.MinFollowDistance)
+                end
                 mq.cmdf("/followme")
                 mq.delay(500)
                 instance.unpause()
@@ -405,7 +434,6 @@ while(instance.inCombat()) do
 end
 
 print("Playback ended!")
-
 local currentScore = math.ceil(os.clock() - startTime)
 print(string.format("Run time was %d seconds", currentScore))
 
@@ -416,8 +444,5 @@ if (currentScore < highScore) and instance.HighScoreEligible then
     print(string.format("New high score for %s!!! ---=== %d ===---", mq.TLO.Zone.ShortName(), currentScore))
     instance.setHighScore(currentScore)
 end
-
-print(string.format("Run time was %d seconds", os.clock() - startTime))
-
 
 
