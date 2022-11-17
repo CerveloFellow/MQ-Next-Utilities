@@ -41,10 +41,18 @@ function LDONUtil.new()
     self.ConfigurationSettings.PullSize = 3
     -- Minimum mana needed to fight, otherwise we med after fights
     self.ConfigurationSettings.MinMana = 50
+    -- Amount of mana you will med up to when you stop to med
+    self.ConfigurationSettings.MedMana = 90
     -- If you're not in combat and navigating to a mob, you will stop and fight if anyone in the group drops below this hit point threshold
     self.ConfigurationSettings.MinHealth = 70
     --- COTH item/spell if group members get stuck
     self.ConfigurationSettings.COTH = ""
+    -- This command will get run before you start.  I use it to remove lev which is troublesome in the LDON dungeons
+    self.ConfigurationSettings.OnStart = "/bcga //removelev"
+    -- This command will get run when you're finished.  Port out, alt activate 331, whatever you want.
+    self.ConfigurationSettings.OnFinish = "/bcga //say I can run a command when I finish"
+    -- Do you want to continue killing mobs after your adventure is complete?
+    self.ConfigurationSettings.ContinueAfterComplete = true
 
     function self.createIniDefaults()
         if not mq.TLO.Ini.File(self.INI).Exists() then
@@ -54,11 +62,15 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)
 
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
 
 
         end
@@ -77,7 +89,7 @@ function LDONUtil.new()
     end
 
     function self.getIniSettings()
-        stringtoboolean={ ["true"]=true, ["false"]=false }
+        local stringtoboolean={ ["true"]=true, ["false"]=false }
 
         if not mq.TLO.Ini.File(self.INI).Exists() then
             self.createIniDefaults()
@@ -88,18 +100,26 @@ function LDONUtil.new()
             self.ConfigurationSettings.LootRadius = tonumber(getKey(self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius))
             self.ConfigurationSettings.MaxFollowDistance = tonumber(getKey(self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance))
             self.ConfigurationSettings.MinFollowDistance = tonumber(getKey(self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance))
+            self.ConfigurationSettings.ContinueAfterComplete = stringtoboolean[getKey(self.INI, "General", "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)]
         end
 
         if not mq.TLO.Ini.File(self.INI).Section(mq.TLO.Me.Name()).Exists() then
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
         else
             self.ConfigurationSettings.PullSize = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.LootRadius))
             self.ConfigurationSettings.MinMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana))
+            self.ConfigurationSettings.MedMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana))
             self.ConfigurationSettings.MinHealth = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth))
             self.ConfigurationSettings.COTH = getKey(self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            self.ConfigurationSettings.OnStart = getKey(self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
+            self.ConfigurationSettings.OnFinish = getKey(self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
+            
         end
     end
 
@@ -162,6 +182,10 @@ function LDONUtil.new()
 
     function self.adventureComplete()
     
+        if self.ConfigurationSettings.ContinueAfterComplete then
+            return false
+        end
+        
         local progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
         local progressTable = {}
     
@@ -225,9 +249,9 @@ function LDONUtil.new()
         return (spawnCount>invalidSpawnCount)
     end
     
-    function self.needToMed()
+    function self.needToMed(minimumMana)
         -- check for slowed because Stonewall Discipline triggers and messes me up
-        return (mq.TLO.Group.LowMana(self.ConfigurationSettings.MinMana)() > 0)
+        return (mq.TLO.Group.LowMana(minimumMana)() > 0)
     end
     
     function self.everyoneHere(distance)
@@ -293,6 +317,32 @@ function LDONUtil.new()
         end
     end
 
+    function self.ldonBind(...)
+        local arg = {...}
+        local stringtoboolean={ ["true"]=true, ["false"]=false }
+
+        if #arg > 0 then
+            if string.upper(arg[1]) == "PMIZ" then
+                self.printMobsInZone()
+            elseif string.upper(arg[1]) == "AC" then
+                self.adventureComplete()
+            elseif string.upper(arg[1]) == "CAC" then
+                if arg[2] then
+                    local cacBool = stringtoboolean[string.lower(arg[2])]
+                    self.ConfigurationSettings.ContinueAfterComplete = cacBool
+                else
+                    self.ConfigurationSettings.ContinueAfterComplete = not self.ConfigurationSettings.ContinueAfterComplete
+                end
+                print(string.format("Continue After Complete is set to %s", self.ConfigurationSettings.ContinueAfterComplete))
+            end
+        else
+            print("LDONUtility usage:")
+            print('/ldu pmiz - print mobs in zone.  Mostly for debugging to make sure your Invalid Spawns are being applied correctly')
+            print("/ldu ac - shows adventure complete status")
+            print("/ldu cac [true/false] - without [true/false] this will toggle continue after complete, otherwise it forces it to true/false")
+        end
+    end
+
     return self
 end
 
@@ -311,14 +361,16 @@ end
 instance.checkEligibility()
 instance.initZone()
 
--- Set up binds
--- check adventure complete status
-mq.bind("/ac", instance.adventureComplete)
--- print mobs in zone
-mq.bind("/pmiz", instance.printMobsInZone)
+-- set up bind for ldon utlity with /ldu
+-- /ldu pmiz -- print mobs in zone
+-- /ldu ac -- print adventure complete status
+-- /ldu cac true/false set continue after complete to true/false
+mq.bind("/ldu", instance.ldonBind)
 
-mq.cmdf("/bcga //removelev")
-mq.delay(200)
+if #instance.ConfigurationSettings.OnStart > 0 then
+    mq.cmdf(instance.ConfigurationSettings.OnStart)
+    mq.delay(200)
+end
 mq.cmdf("/bc loot on")
 mq.delay(500)
 mq.cmdf("/lootall")
@@ -382,15 +434,19 @@ do
                 mq.delay("5s", function() return (not instance.inCombat()) end)
             elseif instance.anyMobsToLoot() then
                 print("Combat finished, time to loot!")
+                mq.cmdf("/clearxtargets ForceOff")
+                mq.delay(200)
                 mq.cmdf("/squelch /bc loot on")
                 mq.delay("15s", function() return (instance.inCombat() or (not instance.anyMobsToLoot())) end)
-            elseif instance.needToMed() and instance.LoopBoolean then
+            elseif instance.needToMed(instance.ConfigurationSettings.MinMana) and instance.LoopBoolean then
                 print("Done Looting, we need to med!")
+                mq.cmdf("/clearxtargets ForceOff")
+                mq.delay(200)
                 mq.cmdf("/squelch /stop")
                 mq.delay(500)
                 mq.cmdf("/squelch /medon")
-                mq.delay("20s", function() return (instance.inCombat() or (not instance.needToMed())) end)
-                if not instance.needToMed() then
+                mq.delay("120s", function() return (instance.inCombat() or (not instance.needToMed(instance.ConfigurationSettings.MedMana))) end)
+                if not instance.needToMed(instance.ConfigurationSettings.MinMana) then
                     mq.cmdf("/squelch /followme")
                     mq.delay(500)
                     mq.cmdf("/squelch /medoff")
@@ -443,6 +499,11 @@ if (currentScore < highScore) and instance.HighScoreEligible then
     print(string.format("Old High Score for %s: %d", mq.TLO.Zone.ShortName(), highScore))
     print(string.format("New high score for %s!!! ---=== %d ===---", mq.TLO.Zone.ShortName(), currentScore))
     instance.setHighScore(currentScore)
+end
+
+if #instance.ConfigurationSettings.OnFinish > 0 then
+    mq.cmdf(instance.ConfigurationSettings.OnFinish)
+    mq.delay(200)
 end
 
 
