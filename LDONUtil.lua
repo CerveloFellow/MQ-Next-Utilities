@@ -47,6 +47,8 @@ function LDONUtil.new()
     self.ConfigurationSettings.MinHealth = 70
     --- COTH item/spell if group members get stuck
     self.ConfigurationSettings.COTH = ""
+    -- Character to COTH with.  If empty, it defaults to the character you're running the script with
+    self.ConfigurationSettings.COTHCharacter = ""
     -- This command will get run before you start.  I use it to remove lev which is troublesome in the LDON dungeons
     self.ConfigurationSettings.OnStart = "/bcga //removelev"
     -- This command will get run when you're finished.  Port out, alt activate 331, whatever you want.
@@ -69,6 +71,7 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTHCharacter)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
 
@@ -109,6 +112,7 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH Character", self.ConfigurationSettings.COTHCharacter)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
         else
@@ -117,6 +121,7 @@ function LDONUtil.new()
             self.ConfigurationSettings.MedMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Meditation Mana", self.ConfigurationSettings.MedMana))
             self.ConfigurationSettings.MinHealth = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Health", self.ConfigurationSettings.MinHealth))
             self.ConfigurationSettings.COTH = getKey(self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTH)
+            self.ConfigurationSettings.COTHCharacter = getKey(self.INI, mq.TLO.Me.Name(), "COTH Character", self.ConfigurationSettings.COTHCharacter)
             self.ConfigurationSettings.OnStart = getKey(self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             self.ConfigurationSettings.OnFinish = getKey(self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
             
@@ -185,7 +190,7 @@ function LDONUtil.new()
         if self.ConfigurationSettings.ContinueAfterComplete then
             return false
         end
-        
+
         local progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
         local progressTable = {}
     
@@ -308,10 +313,24 @@ function LDONUtil.new()
             local groupSize = mq.TLO.Group.GroupSize() -1
             for i=1,groupSize do
                 if mq.TLO.Group.Member(i).Spawn.Distance() > maxDistance then
-                    mq.cmdf("/target id %d", mq.TLO.Group.Member(i).Spawn.ID())
-                    mq.delay(100)
-                    mq.cmdf('/%s "%s"',castoruse, self.ConfigurationSettings.COTH)
-                    mq.delay("16s")
+                    local memberNameToCoth = mq.TLO.Group.Member(i).Name()
+                    local memberIdToCoth = mq.TLO.Group.Member(i).Spawn.ID()
+
+                    if self.ConfigurationSettings.COTHCharacter == "" or string.upper(self.ConfigurationSettings.COTHCharacter) == string.upper(mq.TLO.Me.Name()) then
+                        -- Perform COTH yourself
+                        mq.cmdf("/target id %d", memberIdToCoth)
+                        mq.delay(100)
+                        mq.cmdf('/%s "%s"',castoruse, self.ConfigurationSettings.COTH)
+                        mq.delay("16s")
+                    else
+                        -- /bct character to coth
+                        if string.upper(memberNameToCoth) ~= string.upper(self.ConfigurationSettings.COTHCharacter) and mq.TLO.Group.Member(self.ConfigurationSettings.COTHCharacter).Spawn.Distance() < maxDistance then
+                            mq.cmdf("/bct %s //target id %d", self.ConfigurationSettings.COTHCharacter, memberIdToCoth)
+                            mq.delay(100)
+                            mq.cmdf('/bct %s //%s "%s"', self.ConfigurationSettings.COTHCharacter, castoruse, self.ConfigurationSettings.COTH)
+                            mq.delay("16s")
+                        end
+                    end
                 end
             end
         end
