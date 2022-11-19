@@ -12,7 +12,6 @@ LDONUtil = {}
 
 function LDONUtil.new()
     local self = {}
-    self.HighScoreEligible = false
     self.Paused = false
     self.LoopBoolean = true
     self.AdventerTotal = -1
@@ -45,7 +44,7 @@ function LDONUtil.new()
     self.ConfigurationSettings.MedMana = 90
     -- If you're not in combat and navigating to a mob, you will stop and fight if anyone in the group drops below this hit point threshold
     self.ConfigurationSettings.MinHealth = 70
-    --- COTH item/spell if group members get stuck
+    --- COTH item/spell if group members get stuck.  Leave blank to not use Coth
     self.ConfigurationSettings.COTH = ""
     -- Character to COTH with.  If empty, it defaults to the character you're running the script with
     self.ConfigurationSettings.COTHCharacter = ""
@@ -128,14 +127,6 @@ function LDONUtil.new()
         end
     end
 
-    function self.setHighScore(score)
-        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), mq.TLO.Zone.ShortName(), score)
-    end
-
-    function self.getHighScore()
-        return tonumber(getKey(self.INI, mq.TLO.Me.Name(), mq.TLO.Zone.ShortName(), "10800"))
-    end
-
     function spawnFilter(spawn)
         return (spawn.Type() == "NPC") and (not invalidSpawn(spawn)) and spawn.Targetable() and not spawn.Dead() and not spawn.Trader()
     end
@@ -169,19 +160,6 @@ function LDONUtil.new()
             if not self.DistinctMobsTable[spawn.CleanName()] then
                 self.DistinctMobsTable[spawn.CleanName()] = spawn
             end
-        end
-    end
-
-    function self.checkEligibility()
-        local progressText = mq.TLO.Window("AdventureRequestWnd").Child("AdvRqst_ProgressTextLabel").Text()
-        local progressTable = {}
-
-        if string.len(progressText) > 0 then
-            for progress in string.gmatch(progressText, '([^of]+)') do
-                table.insert(progressTable, tonumber(progress))
-            end
-
-            self.HighScoreEligible = tonumber(progressTable[1]) == 0
         end
     end
 
@@ -236,6 +214,21 @@ function LDONUtil.new()
         return false
     end
     
+    function self.xTargetHaters()
+        
+        local haterCount = 0
+
+        local haters = mq.TLO.SpawnCount("xtarhater")()
+        for i=1,haters do
+            local currentSpawn = mq.TLO.NearestSpawn(i, "xtarhater")
+            if not invalidSpawn(currentSpawn) then
+                haterCount = haterCount + 1
+            end
+        end
+
+        return haterCount
+    end
+
     function self.inCombat()
         local invalidSpawnCount = 0
         local spawnCount = mq.TLO.SpawnCount(string.format("xtarhater radius %d", self.ConfigurationSettings.CombatRadius))()
@@ -345,6 +338,18 @@ function LDONUtil.new()
                 self.printMobsInZone()
             elseif string.upper(arg[1]) == "AC" then
                 self.adventureComplete()
+            elseif string.upper(arg[1]) == "RELOAD" then
+                self.getIniSettings()
+            elseif string.upper(arg[1]) == "PULLSIZE" then
+                if arg[2] then
+                    self.ConfigurationSettings.PullSize = tonumber(arg[2])
+                end
+                print(string.format("Pullsize is %d", self.ConfigurationSettings.PullSize))
+            elseif string.upper(arg[1]) == "LOOT" then
+                if arg[2] then
+                    self.ConfigurationSettings.LootEnabled = stringtoboolean[string.lower(arg[2])]
+                end
+                print(string.format("Loot Enabled is set to %s", self.ConfigurationSettings.LootEnabled))
             elseif string.upper(arg[1]) == "CAC" then
                 if arg[2] then
                     local cacBool = stringtoboolean[string.lower(arg[2])]
@@ -359,6 +364,9 @@ function LDONUtil.new()
             print('/ldu pmiz - print mobs in zone.  Mostly for debugging to make sure your Invalid Spawns are being applied correctly')
             print("/ldu ac - shows adventure complete status")
             print("/ldu cac [true/false] - without [true/false] this will toggle continue after complete, otherwise it forces it to true/false")
+            print("/ldu pullsize # - sets the pullsize so you can change while you're running")
+            print("/ldu loot [true/false] - set looting on(true) or off(false)")
+            print("/ldu reload - reload INI settings")
         end
     end
 
@@ -377,7 +385,6 @@ if(#args > 0) then
     instance.ConfigurationSettings.PullSize = tonumber(args[1])
 end
 
-instance.checkEligibility()
 instance.initZone()
 
 -- set up bind for ldon utlity with /ldu
@@ -387,9 +394,12 @@ instance.initZone()
 mq.bind("/ldu", instance.ldonBind)
 
 if #instance.ConfigurationSettings.OnStart > 0 then
-    mq.cmdf(instance.ConfigurationSettings.OnStart)
-    mq.delay(200)
+    for token in string.gmatch(instance.ConfigurationSettings.OnStart, "[^;]+") do
+        mq.cmdf(token)
+        mq.delay(200)
+    end
 end
+
 mq.cmdf("/bc loot on")
 mq.delay(500)
 mq.cmdf("/lootall")
@@ -421,9 +431,9 @@ do
         mq.delay(100)
         while(not instance.Paused and mq.TLO.Navigation.Active())
         do
-            if mq.TLO.Me.XTarget() >= instance.ConfigurationSettings.PullSize then
+            if instance.xTargetHaters() >= instance.ConfigurationSettings.PullSize then
                 instance.pause()
-            elseif not instance.everyoneHere(instance.ConfigurationSettings.MaxFollowDistance) and mq.TLO.Me.XTarget() >= (instance.ConfigurationSettings.PullSize / 2) then
+            elseif not instance.everyoneHere(instance.ConfigurationSettings.MaxFollowDistance) and mq.TLO.Me.XTarget() >= math.ceil(instance.ConfigurationSettings.PullSize / 2) then
                 instance.pause()
             elseif instance.anyoneInjured(instance.ConfigurationSettings.MinHealth) then
                 instance.pause()
@@ -512,17 +522,11 @@ print("Playback ended!")
 local currentScore = math.ceil(os.clock() - startTime)
 print(string.format("Run time was %d seconds", currentScore))
 
-local highScore = instance.getHighScore()
-
-if (currentScore < highScore) and instance.HighScoreEligible then
-    print(string.format("Old High Score for %s: %d", mq.TLO.Zone.ShortName(), highScore))
-    print(string.format("New high score for %s!!! ---=== %d ===---", mq.TLO.Zone.ShortName(), currentScore))
-    instance.setHighScore(currentScore)
-end
-
 if #instance.ConfigurationSettings.OnFinish > 0 then
-    mq.cmdf(instance.ConfigurationSettings.OnFinish)
-    mq.delay(200)
+    for token in string.gmatch(instance.ConfigurationSettings.OnFinish, "[^;]+") do
+        mq.cmdf(token)
+        mq.delay(200)
+    end
 end
 
 
