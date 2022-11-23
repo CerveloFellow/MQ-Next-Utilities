@@ -127,8 +127,8 @@ function LDONUtil.new()
         end
     end
 
-    function spawnFilter(spawn)
-        return (spawn.Type() == "NPC") and (not invalidSpawn(spawn)) and spawn.Targetable() and not spawn.Dead() and not spawn.Trader()
+    function self.spawnFilter(spawn)
+        return (spawn.Type() == "NPC") and (not invalidSpawn(spawn)) and spawn.Targetable() and (not spawn.Dead()) and (not spawn.Trader())
     end
 
     function invalidSpawn(spawn)
@@ -153,7 +153,7 @@ function LDONUtil.new()
     end
 
     function self.initZone()
-        local filteredSpawns = mq.getFilteredSpawns(spawnFilter)
+        local filteredSpawns = mq.getFilteredSpawns(self.spawnFilter)
 
         for index, spawn in ipairs(filteredSpawns) do
             table.insert(self.EntireZoneTable, spawn.ID())
@@ -340,6 +340,8 @@ function LDONUtil.new()
                 self.adventureComplete()
             elseif string.upper(arg[1]) == "RELOAD" then
                 self.getIniSettings()
+            elseif string.upper(arg[1]) == "X" then
+                print(string.format("xtarget %d - mycalc %d", mq.TLO.Me.XTarget(), instance.xTargetHaters()))
             elseif string.upper(arg[1]) == "PULLSIZE" then
                 if arg[2] then
                     self.ConfigurationSettings.PullSize = tonumber(arg[2])
@@ -395,8 +397,13 @@ mq.bind("/ldu", instance.ldonBind)
 
 if #instance.ConfigurationSettings.OnStart > 0 then
     for token in string.gmatch(instance.ConfigurationSettings.OnStart, "[^;]+") do
-        mq.cmdf(token)
-        mq.delay(200)
+        if string.sub(string.upper(token), 1, 5) == "DELAY" then
+            local delay = string.sub(token, 7,#token)
+            mq.delay(delay)
+        else
+            mq.cmdf(token)
+            mq.delay(200)
+        end
     end
 end
 
@@ -524,8 +531,13 @@ print(string.format("Run time was %d seconds", currentScore))
 
 if #instance.ConfigurationSettings.OnFinish > 0 then
     for token in string.gmatch(instance.ConfigurationSettings.OnFinish, "[^;]+") do
-        mq.cmdf(token)
-        mq.delay(200)
+        if string.sub(string.upper(token), 1, 5) == "DELAY" then
+            local delay = string.sub(token, 7,#token)
+            mq.delay(delay)
+        else
+            mq.cmdf(token)
+            mq.delay(200)
+        end
     end
 end
 
