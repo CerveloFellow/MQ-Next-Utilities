@@ -54,6 +54,10 @@ function LDONUtil.new()
     self.ConfigurationSettings.OnFinish = "/bcga //say I can run a command when I finish"
     -- Do you want to continue killing mobs after your adventure is complete?
     self.ConfigurationSettings.ContinueAfterComplete = true
+    -- Commands to issue before medding
+    self.ConfigurationSettings.OnMeditate = ""
+    -- Commands to issue before medding
+    self.ConfigurationSettings.AfterCombat = ""
 
     function self.createIniDefaults()
         if not mq.TLO.Ini.File(self.INI).Exists() then
@@ -63,7 +67,6 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance)
-            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, "General", "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)
 
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.PullSize)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana)
@@ -73,6 +76,9 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH", self.ConfigurationSettings.COTHCharacter)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Meditate", self.ConfigurationSettings.OnMeditate)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "After Combat", self.ConfigurationSettings.AfterCombat)
 
 
         end
@@ -102,7 +108,6 @@ function LDONUtil.new()
             self.ConfigurationSettings.LootRadius = tonumber(getKey(self.INI, "General", "Loot Radius", self.ConfigurationSettings.LootRadius))
             self.ConfigurationSettings.MaxFollowDistance = tonumber(getKey(self.INI, "General", "Maximum Follow Distance", self.ConfigurationSettings.MaxFollowDistance))
             self.ConfigurationSettings.MinFollowDistance = tonumber(getKey(self.INI, "General", "Minimum Follow Distance", self.ConfigurationSettings.MinFollowDistance))
-            self.ConfigurationSettings.ContinueAfterComplete = stringtoboolean[getKey(self.INI, "General", "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)]
         end
 
         if not mq.TLO.Ini.File(self.INI).Section(mq.TLO.Me.Name()).Exists() then
@@ -114,6 +119,9 @@ function LDONUtil.new()
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "COTH Character", self.ConfigurationSettings.COTHCharacter)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "On Meditate", self.ConfigurationSettings.OnMeditate)
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INI, mq.TLO.Me.Name(), "After Combat", self.ConfigurationSettings.AfterCombat)
         else
             self.ConfigurationSettings.PullSize = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Pull Size", self.ConfigurationSettings.LootRadius))
             self.ConfigurationSettings.MinMana = tonumber(getKey(self.INI, mq.TLO.Me.Name(), "Minimum Mana", self.ConfigurationSettings.MinMana))
@@ -123,6 +131,9 @@ function LDONUtil.new()
             self.ConfigurationSettings.COTHCharacter = getKey(self.INI, mq.TLO.Me.Name(), "COTH Character", self.ConfigurationSettings.COTHCharacter)
             self.ConfigurationSettings.OnStart = getKey(self.INI, mq.TLO.Me.Name(), "On Start", self.ConfigurationSettings.OnStart)
             self.ConfigurationSettings.OnFinish = getKey(self.INI, mq.TLO.Me.Name(), "On Finish", self.ConfigurationSettings.OnFinish)
+            self.ConfigurationSettings.ContinueAfterComplete = stringtoboolean[getKey(self.INI, mq.TLO.Me.Name(), "Continue After Complete", self.ConfigurationSettings.ContinueAfterComplete)]
+            self.ConfigurationSettings.OnMeditate = getKey(self.INI, mq.TLO.Me.Name(), "On Meditate", self.ConfigurationSettings.OnMeditate)
+            self.ConfigurationSettings.AfterCombat = getKey(self.INI, mq.TLO.Me.Name(), "After Combat", self.ConfigurationSettings.AfterCombat)
             
         end
     end
@@ -352,6 +363,10 @@ function LDONUtil.new()
                     self.ConfigurationSettings.LootEnabled = stringtoboolean[string.lower(arg[2])]
                 end
                 print(string.format("Loot Enabled is set to %s", self.ConfigurationSettings.LootEnabled))
+            elseif string.upper(arg[1]) == "NTM" then
+                print(string.format("MedMana=%d;  Need To Med=%s", self.ConfigurationSettings.MedMana, self.needToMed(self.ConfigurationSettings.MedMana)))
+            elseif string.upper(arg[1]) == "IC" then
+                print(string.format("In Combat=%s", instance.inCombat()))
             elseif string.upper(arg[1]) == "CAC" then
                 if arg[2] then
                     local cacBool = stringtoboolean[string.lower(arg[2])]
@@ -478,8 +493,23 @@ do
                 print("Done Looting, we need to med!")
                 mq.cmdf("/clearxtargets ForceOff")
                 mq.delay(200)
+                mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
+                mq.delay("15s", function() return instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) end)
                 mq.cmdf("/squelch /stop")
                 mq.delay(500)
+                mq.cmdf("/bcg //nav stop")
+                mq.delay(200)
+                if #instance.ConfigurationSettings.OnMeditate > 0 then
+                    for token in string.gmatch(instance.ConfigurationSettings.OnMeditate, "[^;]+") do
+                        if string.sub(string.upper(token), 1, 5) == "DELAY" then
+                            local delay = string.sub(token, 7,#token)
+                            mq.delay(delay)
+                        else
+                            mq.cmdf(token)
+                            mq.delay(200)
+                        end
+                    end
+                end
                 mq.cmdf("/squelch /medon")
                 mq.delay("120s", function() return (instance.inCombat() or (not instance.needToMed(instance.ConfigurationSettings.MedMana))) end)
                 if not instance.needToMed(instance.ConfigurationSettings.MinMana) then
@@ -490,6 +520,17 @@ do
                 end
             else
                 print("Resume play.")
+                if #instance.ConfigurationSettings.AfterCombat > 0 then
+                    for token in string.gmatch(instance.ConfigurationSettings.AfterCombat, "[^;]+") do
+                        if string.sub(string.upper(token), 1, 5) == "DELAY" then
+                            local delay = string.sub(token, 7,#token)
+                            mq.delay(delay)
+                        else
+                            mq.cmdf(token)
+                            mq.delay(200)
+                        end
+                    end
+                end
                 if not instance.everyoneHere(instance.ConfigurationSettings.MinFollowDistance * 2) then
                     mq.delay(500)
                     mq.cmdf("/squelch /bcg //nav id %d", mq.TLO.Me.ID())
