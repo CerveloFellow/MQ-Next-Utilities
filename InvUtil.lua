@@ -55,10 +55,10 @@ function InvUtil.new()
         for k1,v1 in pairs(self.bankArray) do
             bankItemCount = bankItemCount + v1.itemCount
             local printLine = string.format("%s (%d)",v1.key,v1.itemCount)
-            print(printLine)
+            mq.cmdf(string.format("%s %s"), self.chatChannel, printLine)
         end
-        print(string.format("%d items in your bank", bankItemCount))
-        print(string.format("%d free bank slots", self.bankSlotsOpen()))
+        mq.cmdf(string.format("%s %d items in your bank", self.chatChannel, bankItemCount))
+        mq.cmdf(string.format("%s %d free bank slots", self.chatChannel, self.bankSlotsOpen()))
     end
 
     function self.bankSlotsOpen()
@@ -611,7 +611,6 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
-        print(self.chatChannel)
         mq.cmdf("%s invutil Autosell started for %s", self.chatChannel, mq.TLO.Me.Name())
         self.notAutoSelling = false
         self.scanInventory()
@@ -681,13 +680,14 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
+        mq.cmdf("%s Auto Destroy Print", self.chatChannel)
         self.scanInventory()
         for k1,v1 in pairs(self.inventoryArray) do
             for k2, v2 in pairs(v1.value) do
                 local lootSetting = lsu.getIniValue(v2) or "Nothing"
                 if(string.find(lootSetting, self.DESTROY)) then
                     for y=1,#v1.locations do
-                        print("Destroying: ",v1.key," - ",v1.locations[y])
+                        mq.cmdf(string.format("%s Destroying: %s - %s", self.chatChannel, v1.key, v1.locations[y]))
                         if not printMode then
                             destroySingleItem(v1.locations[y],3)
                         end
@@ -774,20 +774,19 @@ instance.getIniSettings()
 instance.scanInventory()
 instance.scanBank()
 
-print("InvUtil has been started")
+if(instance.chatInitCommand~=nil and #instance.chatInitCommand > 0) then
+    mq.cmdf(instance.chatInitCommand)
+end
+
+mq.cmdf(string.format("%s InvUtil has been started", instance.chatChannel))
 if(instance.scriptRunTime > 0) then
-    print(string.format("InvUtil will automatically terminat in %s seconds.", instance.scriptRunTime))
+    mq.cmdf(string.format("%s InvUtil will automatically terminate in %s seconds.", instance.chatChannel, instance.scriptRunTime))
 else
-    print("InvUtil will not automatically terminate and you will have to issue /lua stop or /lua stop InvUtil to terminate this script.")
+    mq.cmdf(string.format("%s InvUtil will not automatically terminate and you will have to issue /lua stop or /lua stop InvUtil to terminate this script.", instance.chatChannel))
 end
 
 if(instance.enableItemSoldEvent) then
-    print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
-end
-
-if(instance.chatChannel~=nil and #instance.chatInitCommand > 0) then
-    mq.cmdf(instance.chatInitCommand)
-    print("Command executed")
+    mq.cmdf(string.format("%s Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell", instance.chatChannel))
 end
 
 mq.bind("/abank", instance.autoBank)
@@ -821,4 +820,4 @@ do
     end
 end
 
-print("InvUtil expired.  You are no longer autoflagging items that you sell.")
+mq.cmdf(string.format("%s InvUtil expired.  You are no longer autoflagging items that you sell.", instance.chatChannel))
