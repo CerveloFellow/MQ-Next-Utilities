@@ -46,6 +46,8 @@ function InvUtil.new()
     self.enableItemSoldEvent = true
     self.notAutoSelling = true
     self.defaultLootSettingsIni = "C:\\E3_RoF2\\Macros\\e3 Macro Inis\\Loot Settings.ini"
+    self.defaultChatInitCommand = ""
+    self.defaultChatChannel = "/say"
 
     function self.printBank()
         local lastBankItem = ""
@@ -701,6 +703,8 @@ function InvUtil.new()
         mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Script Run Time(seconds)", self.defaultScriptRunTime)
         mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Enable Sold Item Event(true\\false)", "true")
         mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Loot Settings File", self.defaultLootSettingsIni)
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Chat Init Command", self.defaultChatInitCommand)
+        mq.cmdf('/ini "%s" "%s" "%s" "%s"', self.INVUTILINI, "Settings", "Chat Channel", self.defaultChatChannel)
     end
 
     function self.getIniSettings()
@@ -732,7 +736,7 @@ function InvUtil.new()
                 self.chatChannel = tempString
             end
         else
-            print("No InvUtil.ini is present.  Creating one and exiting.  Please edit the file and re-run the script.")
+            print(string.format("No InvUtil.ini is present.  Creating %s and exiting.  Please edit the file and re-run the script.", self.INVUTILINI))
             createIniDefaults()
             self.scriptRunTime = self.defaultScriptRunTime
             self.enableItemSoldEvent = true
@@ -781,7 +785,7 @@ if(instance.enableItemSoldEvent) then
     print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
 end
 
-if(instance.chatInitCommand~=nil and #instance.chatInitCommand > 0) then
+if(instance.chatChannel~=nil and #instance.chatInitCommand > 0) then
     mq.cmdf(instance.chatInitCommand)
     print("Command executed")
 end
@@ -818,4 +822,3 @@ do
 end
 
 print("InvUtil expired.  You are no longer autoflagging items that you sell.")
-
