@@ -32,7 +32,7 @@ function InvUtil.new()
 
     self.inventoryArray = inventoryArray
     self.dropArray = dropArray
-    self.INVUTILINI = "C:\\E3_RoF2\\config\\InvUtil.ini"
+    self.INVUTILINI = "C:\\ProFusionEQ\\_MQ2\\Config\\InvUtil.ini"
     self.SELL = "Keep,Sell"
     self.SKIP = "Skip"
     self.DESTROY = "Destroy"
@@ -609,7 +609,7 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
-        mq.cmdf("/bc Autosell started for %s", mq.TLO.Me.Name())
+        mq.cmdf("%s invutil Autosell started for %s", self.chatChannel, mq.TLO.Me.Name())
         self.notAutoSelling = false
         self.scanInventory()
 
@@ -663,7 +663,8 @@ function InvUtil.new()
 
         self.autoDestroy(...)
         self.scanInventory()
-        mq.cmdf("/bc Autosell Complete for %s", mq.TLO.Me.Name())
+
+        mq.cmdf("%s invutil Autosell started for %s", self.chatChannel, mq.TLO.Me.Name())
         -- before re-enabling autoselling, flush events and pause.  I would occasionally get errors because the autoSell event would
         -- get triggered after re-enabling autosell
         mq.flushevents("event_soldItem")
@@ -719,6 +720,16 @@ function InvUtil.new()
             if(tempString) then
                 self.lootSettingsIni = tempString
             end
+
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Init Command File")()
+            if(tempString) then
+                self.chatInitCommand = tempString
+            end
+            
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Channel File")()
+            if(tempString) then
+                self.chatChannel = tempString
+            end
         else
             print("No InvUtil.ini is present.  Creating one and exiting.  Please edit the file and re-run the script.")
             createIniDefaults()
@@ -767,6 +778,10 @@ end
 
 if(instance.enableItemSoldEvent) then
     print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
+end
+
+if(#instance.chatInitCommand >0) then
+    mq.cmdf(instance.chatInitCommand)
 end
 
 mq.bind("/abank", instance.autoBank)
