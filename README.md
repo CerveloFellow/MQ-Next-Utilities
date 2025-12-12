@@ -30,6 +30,8 @@ The first time you run the script, if an INI file is not present, one will be cr
 |**Script&nbsp;Run&nbsp;Time(seconds)**|The time in seconds for the script to auto terminate.  Setting this to 0 will disable auto terminate|
 |**Enable&nbsp;Sold&nbsp;Item&nbsp;Event(true\false)**|Toggle whether the enable sold items event is on.  If true, any items sold to the vendor will automatically get flagged as Keep,Sell|
 |**Loot&nbsp;Settings&nbsp;File**|The path to your Loot Settings.ini(e.g. C:\E3_RoF2\Macros\e3 Macro Inis\Loot Settings.ini)|
+|**Chat&nbsp;Init&nbsp;Command**|An init command to join a chat channel, mostly for DANNET(example /djoin invutil), this value can be blank and no init will be run|
+|**Chat&nbsp;Channel**|This is the chat channel that autosell and autobank messages go to, examples are /bc(for EQBCS), /g, /gu, /say or with somethign like DANNET, /dgtell invutil)|
 
 ## Binds
 - **/abank [print]** - Auto Bank.  When you're near a banker and you issue this command you will walk up to the nearest banker and put any items from your inventory that have been flagged as Keep,Bank into your bank.  **When the item can't be stored in the bank for some reason(your bank is full, item is No Storage, etc.), the item will now be placed back in your inventory.**  Optionally **/abank print** will only print the items that will be banked and not bank them.
