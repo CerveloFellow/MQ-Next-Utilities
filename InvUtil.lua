@@ -781,7 +781,7 @@ if(instance.enableItemSoldEvent) then
     print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
 end
 
-if(instance.chatChannel~=nil and #instance.chatInitCommand > 0) then
+if(instance.chatInitCommand~=nil and #instance.chatInitCommand > 0) then
     mq.cmdf(instance.chatInitCommand)
     print("Command executed")
 end
@@ -818,3 +818,4 @@ do
 end
 
 print("InvUtil expired.  You are no longer autoflagging items that you sell.")
+
