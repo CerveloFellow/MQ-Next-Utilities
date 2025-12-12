@@ -609,6 +609,7 @@ function InvUtil.new()
         local lsu = LootSettingUtil.new(self.lootSettingsIni)
         local printMode = #arg > 0 and (string.lower(arg[1]) == "print") and true or false
 
+        print(self.chatChannel)
         mq.cmdf("%s invutil Autosell started for %s", self.chatChannel, mq.TLO.Me.Name())
         self.notAutoSelling = false
         self.scanInventory()
@@ -721,12 +722,12 @@ function InvUtil.new()
                 self.lootSettingsIni = tempString
             end
 
-            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Init Command File")()
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Init Command")()
             if(tempString) then
                 self.chatInitCommand = tempString
             end
             
-            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Channel File")()
+            tempString = mq.TLO.Ini(self.INVUTILINI,"Settings", "Chat Channel")()
             if(tempString) then
                 self.chatChannel = tempString
             end
@@ -780,8 +781,9 @@ if(instance.enableItemSoldEvent) then
     print("Enable Sold Item Event is true.  Any items you sell to the vendor while this script is running will automatically get flagged in yoru Loot Settings.ini as Keep,Sell")
 end
 
-if(#instance.chatInitCommand >0) then
+if(instance.chatChannel~=nil and #instance.chatInitCommand > 0) then
     mq.cmdf(instance.chatInitCommand)
+    print("Command executed")
 end
 
 mq.bind("/abank", instance.autoBank)
