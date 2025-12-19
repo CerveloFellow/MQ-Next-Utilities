@@ -10,32 +10,116 @@ local Config = {
     defaultAllowCombatLooting = false,
     defaultSlotsToKeepFree = 2,
     lootRadius = 50,
-    useWarp = false,
-    itemsToKeep = {
-        'Green Stone of Minor Advancement',
-        'Frosty Stone of Hearty Advancement',
-        'Fiery Stone of Incredible Advancement',
-        'Moneybags - Bag of Platinum Pieces',
-        'Moneybags - Heavy Bag of Platinum!',
-        "Unidentified Item",
-        "Epic Gemstone of Immortality"
-    },
-    itemsToShare = {
-        "Ancient Elvish Essence", "Ancient Life's Stone", "Astrial Mist", 
-        "Book of Astrial-1", "Book of Astrial-2", "Book of Astrial-6", 
-        "Bottom Piece of Astrial", "Bottom Shard of Astrial", 
-        "celestial ingot", "celestial temper", "Center Shard of Astrial", 
-        "Center Splinter of Astrial", "Death's Soul", "Elemental Infused Elixir", 
-        "Epic Gemstone of Immortality", "Fallen Star", "Hermits Lost Chisel", 
-        "hermits lost Forging Hammer", "Left Shard of Astrial", 
-        "Overlords Anguish Stone", "Right Shard of Astrial", 
-        "Testimony of the Lords", "The Horadric Lexicon", "The Lost Foci", 
-        "Token of Discord", "Tome of Power: Anguish", "Tome of Power: Hole", 
-        "Tome of Power: Kael", "Tome of Power: MPG", "Tome of Power: Najena", 
-        "Tome of Power: Riftseekers", "Tome of Power: Sleepers", 
-        "Tome of Power: Veeshan", "Top Splinter of Astrial", "Warders Guise"
-    }
+    useWarp = true,
+    iniFile = mq.configDir .. '/MasterLoot.ini',
+    itemsToKeep = {},
+    itemsToShare = {},
+    itemsToIgnore = {}
 }
+
+-- ============================================================================
+-- INI Management Module
+-- ============================================================================
+local INIManager = {}
+
+function INIManager.loadItemList(section)
+    local items = {}
+    local index = 1
+    
+    while true do
+        local item = mq.TLO.Ini.File(Config.iniFile).Section(section).Key('Item' .. index).Value()
+        if item == nil or item == 'NULL' or item == '' then
+            break
+        end
+        table.insert(items, item)
+        index = index + 1
+    end
+    
+    return items
+end
+
+function INIManager.saveItemList(section, items)
+    -- Clear existing items
+    local index = 1
+    while true do
+        local existing = mq.TLO.Ini.File(Config.iniFile).Section(section).Key('Item' .. index).Value()
+        if existing == nil or existing == 'NULL' or existing == '' then
+            break
+        end
+        mq.cmdf('/ini "%s" "%s" "Item%d"', Config.iniFile, section, index)
+        index = index + 1
+    end
+    
+    -- Write new items
+    for i, item in ipairs(items) do
+        mq.cmdf('/ini "%s" "%s" "Item%d" "%s"', Config.iniFile, section, i, item)
+    end
+    
+    print(string.format("Saved %d items to [%s]", #items, section))
+end
+
+function INIManager.initializeINI()
+    -- Check if file exists, if not create with defaults
+    local fileExists = mq.TLO.Ini.File(Config.iniFile).Section('ItemsToKeep').Key('Item1').Value()
+    
+    if fileExists == nil or fileExists == 'NULL' or fileExists == '' then
+        print("INI file not found or empty, creating with default values...")
+        
+        -- Default ItemsToKeep
+        local defaultKeep = {
+            'Green Stone of Minor Advancement',
+            'Frosty Stone of Hearty Advancement',
+            'Fiery Stone of Incredible Advancement',
+            'Moneybags - Bag of Platinum Pieces',
+            'Moneybags - Heavy Bag of Platinum!',
+            "Unidentified Item",
+            "Epic Gemstone of Immortality"
+        }
+        INIManager.saveItemList('ItemsToKeep', defaultKeep)
+        
+        -- Default ItemsToShare
+        local defaultShare = {
+            "Ancient Elvish Essence", "Ancient Life's Stone", "Astrial Mist", 
+            "Book of Astrial-1", "Book of Astrial-2", "Book of Astrial-6", 
+            "Bottom Piece of Astrial", "Bottom Shard of Astrial", 
+            "celestial ingot", "celestial temper", "Center Shard of Astrial", 
+            "Center Splinter of Astrial", "Death's Soul", "Elemental Infused Elixir", 
+            "Epic Gemstone of Immortality", "Fallen Star", "Hermits Lost Chisel", 
+            "hermits lost Forging Hammer", "Left Shard of Astrial", 
+            "Overlords Anguish Stone", "Right Shard of Astrial", 
+            "Testimony of the Lords", "The Horadric Lexicon", "The Lost Foci", 
+            "Token of Discord", "Tome of Power: Anguish", "Tome of Power: Hole", 
+            "Tome of Power: Kael", "Tome of Power: MPG", "Tome of Power: Najena", 
+            "Tome of Power: Riftseekers", "Tome of Power: Sleepers", 
+            "Tome of Power: Veeshan", "Top Splinter of Astrial", "Warders Guise"
+        }
+        INIManager.saveItemList('ItemsToShare', defaultShare)
+        
+        local defaultIgnore = {
+            "Rusty Shortsword"
+        }
+        -- ItemsToIgnore starts empty
+        INIManager.saveItemList('ItemsToIgnore', defaultIgnore)
+    end
+end
+
+function INIManager.loadConfig()
+    INIManager.initializeINI()
+    
+    Config.itemsToKeep = INIManager.loadItemList('ItemsToKeep')
+    Config.itemsToShare = INIManager.loadItemList('ItemsToShare')
+    Config.itemsToIgnore = INIManager.loadItemList('ItemsToIgnore')
+    
+    print(string.format("Loaded %d items to keep", #Config.itemsToKeep))
+    print(string.format("Loaded %d items to share", #Config.itemsToShare))
+    print(string.format("Loaded %d items to ignore", #Config.itemsToIgnore))
+end
+
+function INIManager.reloadConfig()
+    print("Reloading configuration from INI file...")
+    INIManager.loadConfig()
+    mq.cmdf('/g Configuration reloaded from INI file')
+end
 
 -- ============================================================================
 -- Utility Functions
@@ -138,6 +222,12 @@ end
 
 function ItemEvaluator.shouldLoot(corpseItem)
     -- Check if player can use the item
+
+    if Config.itemsToIgnore  and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
+        print("Item is in ignore list, skipping.")
+        return false
+    end
+
     if corpseItem.CanUse() then
         -- Skip lore items we already own
         if corpseItem.Lore() and Utils.ownItem(corpseItem.Name()) then
@@ -535,8 +625,8 @@ GUI.groupMemberSelected = mq.TLO.Me.Name()
 function GUI.createGUI()
     return function(open)
         local main_viewport = imgui.GetMainViewport()
-        imgui.SetNextWindowPos(main_viewport.WorkPos.x + 650, main_viewport.WorkPos.y + 20, ImGuiCond.Once)
-        imgui.SetNextWindowSize(500, 300, ImGuiCond.Once)
+        imgui.SetNextWindowPos(main_viewport.WorkPos.x + 800, main_viewport.WorkPos.y + 20, ImGuiCond.Once)
+        imgui.SetNextWindowSize(450, 280, ImGuiCond.Always)
         
         local show
         open, show = imgui.Begin("Master Looter", open)
@@ -592,6 +682,7 @@ function GUI.renderNavigationToggle()
 end
 
 function GUI.renderActionButtons()
+    ImGui.SetWindowFontScale(0.7)
     if imgui.Button("Master Loot") then
         mq.cmdf("/mlml")
     end
@@ -610,6 +701,12 @@ function GUI.renderActionButtons()
     if imgui.Button("Loot Item(s)") then
         GUI.executeLootItems()
     end
+    
+    imgui.SameLine()
+    if imgui.Button("Reload INI") then
+        INIManager.reloadConfig()
+    end
+    ImGui.SetWindowFontScale(1.0)
 end
 
 function GUI.executePeerLoot()
@@ -625,6 +722,14 @@ function GUI.executePeerLoot()
 end
 
 function GUI.executeQueueItem()
+    -- Check if a valid item is selected
+    if not LootManager.listboxSelectedOption or 
+       not LootManager.listboxSelectedOption.corpseId or 
+       not LootManager.listboxSelectedOption.itemId then
+        print("No item selected to queue")
+        return
+    end
+    
     mq.cmdf("/g mlqi %s %d %d", 
         GUI.groupMemberSelected, 
         LootManager.listboxSelectedOption.corpseId, 
@@ -662,11 +767,12 @@ function GUI.renderGroupMemberSelection()
             local memberName = mq.TLO.Group.Member(i).Name()
             local isActive = (GUI.radioSelectedOption == i)
             
+            ImGui.SetWindowFontScale(0.7)
             if imgui.RadioButton(memberName, isActive) then
                 GUI.radioSelectedOption = i
                 GUI.groupMemberSelected = memberName
             end
-
+            ImGui.SetWindowFontScale(1.0)
             if i < groupSize then
                 imgui.SameLine()
             end
@@ -735,6 +841,12 @@ end
 local openGUI = true
 
 print("LootUtil has been started")
+print("INI file location: " .. Config.iniFile)
+
+-- Load configuration from INI
+INIManager.loadConfig()
+
+mq.cmdf("/lootnodrop never")
 
 -- Register commands
 mq.bind("/mlml", Commands.masterLoot)
@@ -742,6 +854,7 @@ mq.bind("/mlpl", Commands.peerLoot)
 mq.bind("/mlli", LootManager.lootQueuedItems)
 mq.bind("/mlsl", Commands.stopScript)
 mq.bind("/ti", Commands.testItem)
+mq.bind("/mlrc", INIManager.reloadConfig)
 
 -- Register events
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", LootManager.queueItem)
@@ -757,5 +870,3 @@ while openGUI do
     mq.doevents()
     mq.delay(1)
 end
-
-print("MasterLoot is exiting.")
