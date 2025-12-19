@@ -632,23 +632,25 @@ function LootUtil.new()
             
             imgui.Separator()
             
-            -- Group member radio buttons
-            local groupMembersCount = mq.TLO.Group.GroupSize() - 1
-            
-            for i = 0, groupMembersCount do
-                local memberName = mq.TLO.Group.Member(i).Name()
-                local isActive = (self.radioSelectedOption == i)
-                
-                if imgui.RadioButton(memberName, isActive) then
-                    self.radioSelectedOption = i
-                    self.groupMemberSelected = memberName
-                end
 
-                if i < groupMembersCount then
-                    imgui.SameLine()
+            -- Group member radio buttons
+            local groupMembersCount = ((mq.TLO.Group.GroupSize()) or 0) - 1
+
+            if groupMembersCount >= 0 then
+                for i = 0, groupMembersCount do
+                    local memberName = mq.TLO.Group.Member(i).Name()
+                    local isActive = (self.radioSelectedOption == i)
+                    
+                    if imgui.RadioButton(memberName, isActive) then
+                        self.radioSelectedOption = i
+                        self.groupMemberSelected = memberName
+                    end
+
+                    if i < groupMembersCount then
+                        imgui.SameLine()
+                    end
                 end
             end
-            
             imgui.Separator()
             imgui.SetNextItemWidth(300)
 
