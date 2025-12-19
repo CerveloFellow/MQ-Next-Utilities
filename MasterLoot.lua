@@ -1,45 +1,29 @@
---[[
-    Master Loot Utilities
-    LUA utilities to help manage group looting with multi-class item distribution
-
-    See the README for usage https://github.com/CerveloFellow/MQ-Next-Utilities/blob/main/README.md
-]]
-
 local mq = require('mq')
 local imgui = require('ImGui')
 
--- ============================================================================
--- LootUtil Class
--- ============================================================================
 LootUtil = {}
 
 function LootUtil.new()
     local self = {}
     
-    -- Configuration
     self.chatConfig = "/djoin classLoot"
     self.chatChannel = "/dgtell classLoot "
     self.defaultAllowCombatLooting = false
     self.defaultSlotsToKeepFree = 2
     self.lootRadius = 50
+    self.useWarp = true
     
-    -- State
     self.loopBoolean = true
     self.currentCorpseTable = {}
     self.multipleUseTable = {}
     self.myQueuedItems = {}
     
-    -- GUI State
     self.radioSelectedOption = 0
     self.groupMemberSelected = mq.TLO.Me.Name()
     self.listboxSelectedOption = {}
     self.listboxSelectedOption.corpseId = 0
     self.listboxSelectedOption.itemId = 0
     self.listboxSelectedOption.itemName = ""
-    
-    -- ========================================================================
-    -- Utility Functions
-    -- ========================================================================
     
     local function chatMessage(message)
         return string.format("%s %s", self.chatChannel, message)
@@ -60,21 +44,16 @@ function LootUtil.new()
     end
     
     function multimap_insert(map, key, value)
-        -- Check if the key already has a table value
         if map[key] == nil then
-            -- If not, initialize it with a new empty table (array syntax {})
             map[key] = {}
         end
         
-        -- Check if the value already exists in the table
         for _, v in pairs(map[key]) do
             if v.itemId == value.itemId then
-                -- Value already exists, don't insert
                 return false
             end
         end
         
-        -- Insert the new value into the inner table
         table.insert(map[key], value)
         return true
     end
@@ -106,9 +85,14 @@ function LootUtil.new()
         toprint = toprint .. string.rep(" ", indent - 2) .. "}"
         return toprint
     end
-    -- ========================================================================
-    -- Item Evaluation Functions
-    -- ========================================================================
+    
+    local function navigateToLocation(x, y, z)
+        if self.useWarp then
+            mq.cmdf("/warp loc %d %d %d", y, x, z)
+        else
+            mq.cmdf("/nav locxyz %d %d %d", x, y, z)
+        end
+    end
     
     local function groupMembersCanUse(corpseItem)
         local returnCount = 0
@@ -142,59 +126,41 @@ function LootUtil.new()
         }
         local itemName = corpseItem.Name()
 
-        -- Check if I can use it
         if corpseItem.CanUse() then
-            -- If it's lore and I already own it, skip
             if corpseItem.Lore() and ownItem(corpseItem.Name()) then
-                --print(itemName.." not looting due to Lore and I already own it.")
                 return false
             end
             
-            -- Check if multiple group members can use it
             if corpseItem.NoDrop() or corpseItem.NoTrade() then
                 for i = 0, corpseItem.Classes() do
                     for j = 0, mq.TLO.Group.Members() do
                         if corpseItem.Class(i).Name() == mq.TLO.Group.Member(j).Class() then
                             mq.cmdf('/g ***' .. corpseItem.ItemLink('CLICKABLE')() .. '*** can be used by multiple classes')
-                            --print(itemName.." not looting due No Drop/No Trade and multiple classes can use it")
                             return false
                         end
                     end
                 end
             end
             
-            -- Check if it's a wearable item
             for i = 1, corpseItem.WornSlots() do
                 if corpseItem.WornSlot(i).ID() < 23 then
-                    --print(itemName.." is wearable, so should loot.")
                     return true
                 end
             end
         end
         
-        -- Check item value
         if (corpseItem.Value() or 0) > 1000 then
-            --print(itemName.." exceeds unstacked threshold of 1000("..(corpseItem.Value() or 0)..")")
             return true
         elseif corpseItem.Stackable() and (corpseItem.Value() or 0) >= 100 then
-            --print(itemName.." exceeds stackable threshold of 100("..(corpseItem.Value() or 0)..")")
             return true
-        else
-            --print(itemName.." is low value "..(corpseItem.Value() or 0))
         end
         
-        -- Check if it's in the keep list
         if contains(itemsToKeep, corpseItem.Name()) then
-            --print(itemName.." is in the keep list")
             return true
         end
         
         return false
     end
-    
-    -- ========================================================================
-    -- Corpse Management Functions
-    -- ========================================================================
     
     local function getCorpseTable(numCorpses)
         local corpseTable = {}
@@ -236,15 +202,10 @@ function LootUtil.new()
         return table.remove(self.currentCorpseTable, nearestCorpseIndex)
     end
     
-    -- ========================================================================
-    -- Looting Functions
-    -- ========================================================================
-    
     local function lootCorpse(corpseObject, isMaster)
         mq.cmdf("/target id %d", corpseObject.ID)
         mq.cmdf("/loot")
         
-        -- Wait for the LootWnd window to open
         mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
         
         if not mq.TLO.Window("LootWnd").Open() then
@@ -270,7 +231,6 @@ function LootUtil.new()
                 mq.cmdf('/g ' .. mq.TLO.Me.Name() .. " inventory is Full!")
             end
             
-            -- Wait for items to appear on the corpse
             mq.delay("3s", function() return mq.TLO.Corpse.Item(i).ID() end)
             local corpseItem = mq.TLO.Corpse.Item(i)
 
@@ -284,7 +244,6 @@ function LootUtil.new()
                     mq.delay(300)
                 end
             else
-                -- If multiple group members can use it, add to table
                 if isMaster and (groupMembersCanUse(corpseItem) > 1) then
                     local tempUseTable = {
                         corpseId = corpseObject.ID,
@@ -303,7 +262,6 @@ function LootUtil.new()
                 end
             end
             
-            -- Try to auto-inventory any cursor items
             if mq.TLO.Cursor then
                 mq.cmdf("/autoinventory")
             end
@@ -331,10 +289,6 @@ function LootUtil.new()
         end
     end
     
-    -- ========================================================================
-    -- Public API Functions
-    -- ========================================================================
-    
     function self.stopScript(line)
         self.loopBoolean = false
     end
@@ -343,17 +297,20 @@ function LootUtil.new()
         local idx, items = next(self.myQueuedItems)
         
         while idx do
-            -- Store next key before potential removal
             local nextIdx = next(self.myQueuedItems, idx)
             
             mq.cmd("/say #corpsefix")
             mq.delay(500)
             mq.cmdf("/target id %d", idx)
-            mq.cmdf("/warp t")
+            
+            if self.useWarp then
+                mq.cmdf("/warp t")
+            else
+                mq.cmdf("/nav target")
+            end
+            
             mq.delay(500)
             mq.cmdf("/loot")
-            
-            --mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
             
             local retryCountMax = 5
             local retryCount = 0
@@ -384,7 +341,6 @@ function LootUtil.new()
                 local idx2, tbl = next(items)
                 
                 while idx2 do
-                    -- Store next key before potential removal
                     local nextIdx2 = next(items, idx2)
                     
                     local inventorySlotsRemaining = mq.TLO.Me.FreeInventory() - self.defaultSlotsToKeepFree
@@ -413,11 +369,10 @@ function LootUtil.new()
                         end
 
                         print("Removing idx2: " .. tostring(idx2))
-                        items[idx2] = nil  -- Remove by setting to nil
+                        items[idx2] = nil
                         mq.delay(500)
                     end
                     
-                    -- Use the stored next key
                     idx2 = nextIdx2
                     if idx2 then
                         tbl = items[idx2]
@@ -433,9 +388,8 @@ function LootUtil.new()
             end
             
             print("Removing idx: " .. tostring(idx))
-            self.myQueuedItems[idx] = nil  -- Remove by setting to nil
+            self.myQueuedItems[idx] = nil
             
-            -- Use the stored next key
             idx = nextIdx
             if idx then
                 items = self.myQueuedItems[idx]
@@ -458,7 +412,6 @@ function LootUtil.new()
         self.listboxSelectedOption = {}
 
         mq.cmdf("/g " .. mq.TLO.Me.Name() .. " has started looting")
-        --mq.cmdf("/squelch /e3p off")
         
         if mq.TLO.Stick.Active() then
             stickState = true
@@ -481,7 +434,7 @@ function LootUtil.new()
                 arrivalDistance = 8
             }
             
-            mq.cmdf("/warp loc %d %d %d", moveProps.Y, moveProps.X, moveProps.Z)
+            navigateToLocation(moveProps.X, moveProps.Y, moveProps.Z)
             mq.delay(moveProps.timeToWait)
             lootCorpse(currentCorpse, isMaster)
             currentCorpse = getNearestCorpse()
@@ -491,13 +444,12 @@ function LootUtil.new()
             goto corpseCount
         end
         
-        mq.cmdf("/warp loc %d %d %d", startingLocation.Y, startingLocation.X, startingLocation.Z)
+        navigateToLocation(startingLocation.X, startingLocation.Y, startingLocation.Z)
         mq.delay(startingLocation.timeToWait)
         
         printMultipleUseItems()
         
         mq.cmdf("/g " .. mq.TLO.Me.Name() .. " is done Looting")
-        --mq.cmdf("/squelch /e3p on")
     end
     
     function self.peerLoot()
@@ -551,10 +503,6 @@ function LootUtil.new()
         end
     end
     
-    -- ========================================================================
-    -- GUI Function
-    -- ========================================================================
-    
     function self.createGUI()
         return function(open)
             local main_viewport = imgui.GetMainViewport()
@@ -569,7 +517,6 @@ function LootUtil.new()
                 return open
             end
             
-            -- Initialize defaults on first render
             if self.radioSelectedOption == nil then
                 self.radioSelectedOption = 0
                 local firstMember = mq.TLO.Group.Member(0).Name()
@@ -584,7 +531,16 @@ function LootUtil.new()
             
             imgui.PushItemWidth(imgui.GetFontSize() * -12)
             
-            -- Buttons
+            local warpLabel = self.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
+            if imgui.Button(warpLabel) then
+                self.useWarp = not self.useWarp
+                local mode = self.useWarp and "WARP" or "NAV"
+                print("Navigation mode changed to: " .. mode)
+                mq.cmdf("/g Navigation mode: " .. mode)
+            end
+            
+            imgui.Separator()
+            
             if imgui.Button("Master Loot") then
                 mq.cmdf("/mlml")
             end
@@ -592,11 +548,11 @@ function LootUtil.new()
             imgui.SameLine()
             if imgui.Button("Peer Loot") then
                 if self.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
-                    mq.cmdf("#corpsefix")
+                    mq.cmdf("/say #corpsefix")
                     mq.cmdf("/hidecorpse none")
                     mq.cmdf("/mlpl")
                 else
-                    mq.cmdf("/dex %s #corpsefix", self.groupMemberSelected)
+                    mq.cmdf("/dex %s /say #corpsefix", self.groupMemberSelected)
                     mq.cmdf("/dex %s /hidecorpse none", self.groupMemberSelected)
                     mq.cmdf("/dex %s /mlpl", self.groupMemberSelected)
                 end
@@ -607,24 +563,24 @@ function LootUtil.new()
                 mq.cmdf("/g mlqi %s %d %d", self.groupMemberSelected, self.listboxSelectedOption.corpseId, self.listboxSelectedOption.itemId)
 
                 for idx, items in pairs(self.multipleUseTable) do
-                if(tostring(idx) == tostring(self.listboxSelectedOption.corpseId)) then
-                    for idx2, tbl in pairs(items) do
-                        if((tostring(tbl.itemId)==tostring(self.listboxSelectedOption.itemId)) and tostring(idx)==tostring(self.listboxSelectedOption.corpseId)) then
-                            table.remove(items, idx2)
+                    if(tostring(idx) == tostring(self.listboxSelectedOption.corpseId)) then
+                        for idx2, tbl in pairs(items) do
+                            if((tostring(tbl.itemId)==tostring(self.listboxSelectedOption.itemId)) and tostring(idx)==tostring(self.listboxSelectedOption.corpseId)) then
+                                table.remove(items, idx2)
+                            end
                         end
                     end
                 end
-            end
             end
 
             imgui.SameLine()
             if imgui.Button("Loot Item(s)") then
                 if self.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
-                    mq.cmdf("#corpsefix")
+                    mq.cmdf("/say #corpsefix")
                     mq.cmdf("/hidecorpse none")
                     mq.cmdf("/mlli")
                 else
-                    mq.cmdf("/dex %s #corpsefix", self.groupMemberSelected)
+                    mq.cmdf("/dex %s /say #corpsefix", self.groupMemberSelected)
                     mq.cmdf("/dex %s /hidecorpse none", self.groupMemberSelected)
                     mq.cmdf("/dex %s /mlli", self.groupMemberSelected)
                 end
@@ -632,8 +588,6 @@ function LootUtil.new()
             
             imgui.Separator()
             
-
-            -- Group member radio buttons
             local groupMembersCount = ((mq.TLO.Group.GroupSize()) or 0) - 1
 
             if groupMembersCount >= 0 then
@@ -651,10 +605,10 @@ function LootUtil.new()
                     end
                 end
             end
+            
             imgui.Separator()
             imgui.SetNextItemWidth(300)
 
-            -- Item listbox
             if imgui.BeginListBox("") then
                 for idx, items in pairs(self.multipleUseTable) do
                     for idx2, tbl in ipairs(items) do
@@ -691,33 +645,24 @@ function LootUtil.new()
     return self
 end
 
--- ============================================================================
--- Main Script
--- ============================================================================
-
 local instance = LootUtil.new()
 local openGUI = true
 
 print("LootUtil has been started")
 
--- Bind commands
 mq.bind("/mlml", instance.masterLoot)
 mq.bind("/mlpl", instance.peerLoot)
 mq.bind("/mlli", instance.lootItemById)
 mq.bind("/mlsl", instance.stopScript)
 mq.bind("/ti", instance.testItem)
 
--- Register events
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", instance.queueItem)
 mq.event('testEventItem', "#*#abcd #1# #2# #3#'", instance.testEvent)
 
--- Join chat channel
 mq.cmdf(instance.chatConfig)
 
--- Register GUI
 ImGui.Register('masterLootGui', instance.createGUI())
 
--- Main loop
 while openGUI do
     mq.doevents()
     mq.delay(1)
