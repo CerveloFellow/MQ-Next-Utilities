@@ -715,32 +715,6 @@ mq.cmdf(instance.chatConfig)
 -- Register GUI
 ImGui.Register('masterLootGui', instance.createGUI())
 
--- Test data for list box
---[[corpseId = corpseObject.ID,
-                        itemId = corpseItem.ID(),
-                        itemName = corpseItem.Name(),
-                        itemObject = corpseItem]]
-
-                        instance.multipleUseTable = {}
-instance.listboxSelectedOption = {}
-instance.listboxSelectedOption.corpseId = 20
-instance.listboxSelectedOption.itemId = 1
-instance.listboxSelectedOption.itemName = ""
-
-local multiplier = 0
-
-for c=20,25 do
-    for i=1,3 do
-        local x = {}
-        x.itemName = "Item "..c.."-"..(i + multiplier)
-        x.itemId = (i + multiplier)
-        x.corpseId = c
-        multimap_insert(instance.multipleUseTable, c, x)
-    end
-    multiplier = multiplier + 100
-end
-
-
 -- Main loop
 while openGUI do
     mq.doevents()
