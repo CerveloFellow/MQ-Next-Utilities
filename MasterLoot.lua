@@ -134,7 +134,7 @@ function LootUtil.new()
         local itemsToKeep = {
             'Green Stone of Minor Advancement',
             'Frosty Stone of Hearty Advancement',
-            'Fire Stone of Incredible Advancement',
+            'Fiery Stone of Incredible Advancement',
             'Moneybags - Bag of Platinum Pieces',
             'Moneybags - Heavy Bag of Platinum!',
             "Unidentified Item",
@@ -458,7 +458,7 @@ function LootUtil.new()
         self.listboxSelectedOption = {}
 
         mq.cmdf("/g " .. mq.TLO.Me.Name() .. " has started looting")
-        mq.cmdf("/squelch /e3p off")
+        --mq.cmdf("/squelch /e3p off")
         
         if mq.TLO.Stick.Active() then
             stickState = true
@@ -497,7 +497,7 @@ function LootUtil.new()
         printMultipleUseItems()
         
         mq.cmdf("/g " .. mq.TLO.Me.Name() .. " is done Looting")
-        mq.cmdf("/squelch /e3p on")
+        --mq.cmdf("/squelch /e3p on")
     end
     
     function self.peerLoot()
