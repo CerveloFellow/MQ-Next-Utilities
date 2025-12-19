@@ -58,6 +58,23 @@ function INIManager.saveItemList(section, items)
     print(string.format("Saved %d items to [%s]", #items, section))
 end
 
+function INIManager.loadSettings()
+    local useWarpValue = mq.TLO.Ini.File(Config.iniFile).Section('Settings').Key('UseWarp').Value()
+    
+    if useWarpValue ~= nil and useWarpValue ~= 'NULL' and useWarpValue ~= '' then
+        Config.useWarp = (useWarpValue == 'true' or useWarpValue == '1')
+        print(string.format("Loaded UseWarp setting: %s", tostring(Config.useWarp)))
+    else
+        -- Save default value if not present
+        INIManager.saveSettings()
+    end
+end
+
+function INIManager.saveSettings()
+    mq.cmdf('/ini "%s" "Settings" "UseWarp" "%s"', Config.iniFile, tostring(Config.useWarp))
+    print(string.format("Saved UseWarp setting: %s", tostring(Config.useWarp)))
+end
+
 function INIManager.initializeINI()
     -- Check if file exists, if not create with defaults
     local fileExists = mq.TLO.Ini.File(Config.iniFile).Section('ItemsToKeep').Key('Item1').Value()
@@ -109,6 +126,7 @@ function INIManager.loadConfig()
     Config.itemsToKeep = INIManager.loadItemList('ItemsToKeep')
     Config.itemsToShare = INIManager.loadItemList('ItemsToShare')
     Config.itemsToIgnore = INIManager.loadItemList('ItemsToIgnore')
+    INIManager.loadSettings()
     
     print(string.format("Loaded %d items to keep", #Config.itemsToKeep))
     print(string.format("Loaded %d items to share", #Config.itemsToShare))
@@ -675,6 +693,7 @@ function GUI.renderNavigationToggle()
     local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
     if imgui.Button(warpLabel) then
         Config.useWarp = not Config.useWarp
+        INIManager.saveSettings()
         local mode = Config.useWarp and "WARP" or "NAV"
         print("Navigation mode changed to: " .. mode)
         mq.cmdf("/g Navigation mode: " .. mode)
