@@ -25,9 +25,11 @@ function LootUtil.new()
     self.listboxSelectedOption.itemId = 0
     self.listboxSelectedOption.itemName = ""
     self.itemsToShare = {
-            'Bottom Shard of Astrial',
-            'Top Shard of Astrial',
-            'Loot of the Flowing Waters'
+            "Ancient Elvish Essence", "Ancient Life's Stone", "Astrial Mist", "Book of Astrial-1", "Book of Astrial-2", "Book of Astrial-6", "Bottom Piece of Astrial", 
+            "Bottom Shard of Astrial", "celestial ingot", "celestial temper", "Center Shard of Astrial", "Center Splinter of Astrial", "Death's Soul", "Elemental Infused Elixir", 
+            "Epic Gemstone of Immortality", "Fallen Star", "Hermits Lost Chisel", "hermits lost Forging Hammer", "Left Shard of Astrial", "Overlords Anguish Stone", "Right Shard of Astrial", 
+            "Testimony of the Lords", "The Horadric Lexicon", "The Lost Foci", "Token of Discord", "Tome of Power: Anguish", "Tome of Power: Hole", "Tome of Power: Kael", "Tome of Power: MPG", 
+            "Tome of Power: Najena", "Tome of Power: Riftseekers", "Tome of Power: Sleepers", "Tome of Power: Veeshan", "Top Splinter of Astrial", "Warders Guise"
         }
     local function chatMessage(message)
         return string.format("%s %s", self.chatChannel, message)
@@ -135,15 +137,9 @@ function LootUtil.new()
                 return false
             end
             
-            if corpseItem.NoDrop() or corpseItem.NoTrade() then
-                for i = 0, corpseItem.Classes() do
-                    for j = 0, mq.TLO.Group.Members() do
-                        if corpseItem.Class(i).Name() == mq.TLO.Group.Member(j).Class() then
-                            mq.cmdf('/g ***' .. corpseItem.ItemLink('CLICKABLE')() .. '*** can be used by multiple classes')
-                            return false
-                        end
-                    end
-                end
+            if (corpseItem.NoDrop() or corpseItem.NoTrade()) and (groupMembersCanUse(corpseItem) > 1) then
+                mq.cmdf('/g ***' .. corpseItem.ItemLink('CLICKABLE')() .. '*** can be used by multiple classes')
+                return false
             end
             
             for i = 1, corpseItem.WornSlots() do
