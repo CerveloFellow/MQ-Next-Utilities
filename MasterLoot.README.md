@@ -14,6 +14,7 @@ This script solves a common pain point when running multiple bots: looting takes
 MasterLoot.lua centralizes and automates much of this process, reducing the workload on your main character.
 
 ---
+## Configuration Settings
 
 ## Features
 
