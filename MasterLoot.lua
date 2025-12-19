@@ -24,7 +24,11 @@ function LootUtil.new()
     self.listboxSelectedOption.corpseId = 0
     self.listboxSelectedOption.itemId = 0
     self.listboxSelectedOption.itemName = ""
-    
+    self.itemsToShare = {
+            'Bottom Shard of Astrial',
+            'Top Shard of Astrial',
+            'Loot of the Flowing Waters'
+        }
     local function chatMessage(message)
         return string.format("%s %s", self.chatChannel, message)
     end
@@ -178,31 +182,30 @@ function LootUtil.new()
             }
             table.insert(corpseTable, corpse)
         end
-        
-        self.currentCorpseTable = corpseTable
-    end
-    
-    local function getNearestCorpse()
-        if #self.currentCorpseTable == 0 then
-            return nil
+            self.currentCorpseTable = corpseTable
         end
         
-        local nearestCorpseIndex = 0
-        local nearestCorpseDistance = 9999
-        
-        for i = 1, #self.currentCorpseTable do
-            local c = self.currentCorpseTable[i]
-            local distance = mq.TLO.Math.Distance(c.Y, c.X)()
-            if distance < nearestCorpseDistance then
-                nearestCorpseIndex = i
-                nearestCorpseDistance = distance
+        local function getNearestCorpse()
+            if #self.currentCorpseTable == 0 then
+                return nil
             end
+            
+            local nearestCorpseIndex = 0
+            local nearestCorpseDistance = 9999
+            
+            for i = 1, #self.currentCorpseTable do
+                local c = self.currentCorpseTable[i]
+                local distance = mq.TLO.Math.Distance(c.Y, c.X)()
+                if distance < nearestCorpseDistance then
+                    nearestCorpseIndex = i
+                    nearestCorpseDistance = distance
+                end
+            end
+            
+            return table.remove(self.currentCorpseTable, nearestCorpseIndex)
         end
         
-        return table.remove(self.currentCorpseTable, nearestCorpseIndex)
-    end
-    
-    local function lootCorpse(corpseObject, isMaster)
+        local function lootCorpse(corpseObject, isMaster)
         mq.cmdf("/target id %d", corpseObject.ID)
         mq.cmdf("/loot")
         
@@ -234,7 +237,10 @@ function LootUtil.new()
             mq.delay("3s", function() return mq.TLO.Corpse.Item(i).ID() end)
             local corpseItem = mq.TLO.Corpse.Item(i)
 
-            if shouldILoot(corpseItem) then
+            -- Check if item is in itemsToShare list
+            local isSharedItem = contains(self.itemsToShare, corpseItem.Name())
+
+            if shouldILoot(corpseItem) and not isSharedItem then
                 mq.cmdf('/g ' .. corpseItem.ItemLink('CLICKABLE')())
                 mq.cmdf("/shift /itemnotify loot%d rightmouseup", i)
                 mq.delay(500)
@@ -244,7 +250,7 @@ function LootUtil.new()
                     mq.delay(300)
                 end
             else
-                if isMaster and (groupMembersCanUse(corpseItem) > 1) then
+                if isMaster and (groupMembersCanUse(corpseItem) > 1 or isSharedItem) then
                     local tempUseTable = {
                         corpseId = corpseObject.ID,
                         itemId = corpseItem.ID(),
@@ -288,7 +294,7 @@ function LootUtil.new()
             end
         end
     end
-    
+
     function self.stopScript(line)
         self.loopBoolean = false
     end
