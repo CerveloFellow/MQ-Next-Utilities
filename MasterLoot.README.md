@@ -16,6 +16,16 @@ MasterLoot.lua centralizes and automates much of this process, reducing the work
 ---
 ## Configuration Settings
 
+The first time you run the script, if an INI file is not present, one will be created with default values and the script will exit automatically.
+
+|Key|Value|
+|------------|-------------|
+|**[ItemsToKeep]**|Any items in this list are always looted by any character who loots with Master or Peer Looting|
+|**[ItemsToShare]**|Any items in this list are always ignored and will be listed in the loot window to use with Queue Item and Loot Item(s) |
+|**[ItemsToIgnore]**|Any items in this list are always ignored and will never be looted|
+|**[Settings]**|This section contains configurable options for MasterLoot.lua|
+|**useWarp(true|fase)**|True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
+
 ## Features
 
 ### Master Loot
