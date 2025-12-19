@@ -24,7 +24,7 @@ The first time you run the script, if an INI file is not present, one will be cr
 |**[ItemsToShare]**|Any items in this list are always ignored and will be listed in the loot window to use with Queue Item and Loot Item(s) |
 |**[ItemsToIgnore]**|Any items in this list are always ignored and will never be looted|
 |**[Settings]**|This section contains configurable options for MasterLoot.lua|
-|**useWarp(true|fase)**|True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
+|**useWarp**|(true|fase)True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
 
 ## Features
 
