@@ -24,14 +24,15 @@ The first time you run the script, if an INI file is not present, one will be cr
 |**[ItemsToShare]**|Any items in this list are always ignored and will be listed in the loot window to use with Queue Item and Loot Item(s) |
 |**[ItemsToIgnore]**|Any items in this list are always ignored and will never be looted|
 |**[Settings]**|This section contains configurable options for MasterLoot.lua|
-|**useWarp**|(true|fase)True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
+|**useWarp(true\false)**|True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
 
 ## Features
 
 ### Master Loot
 - Automatically loots all "safe" items (anything not No Trade or No Drop)
-- Includes a hardcoded list of high-priority items (e.g., advancement orbs)
-- After completion, displays remaining No Trade/No Drop items that may be usable by multiple classes in your group
+- Will always loot any items in the [ItemsToKeep] section
+- Will always share to the Loot Window any items in the [ItemsToShare] section
+- Will always ignore any items that are in the [ItemsToIgnore] section
 
 ### Peer Loot
 - Non-master group members automatically loot only items that no one else in the group can use
@@ -46,20 +47,16 @@ The first time you run the script, if an INI file is not present, one will be cr
 
 ---
 
+## How to use
+
+After all the mobs are dead, I will typically use Peer Loot for all of my bot characters which will have them go through and loot any items that only they can use, or are in the [ItemsToKeep] section.  Next i will do Master Loot with my main character who will loot only things that they can use similar to Peer Loot.  Master Loot will make a list of items that are usable by 2 or more people in your group and display them in the listbox in the window, and also print them out to your group(/g) chat.  From there you can inspect objects and determine which character you want to loot it.  You would select the character's radio button, select the item in the list box, and then press the Queue Item button which will add it to that characters queue to loot(while removing it from the list).  Once all items are queued up, you select a character and press the Loot Item(s) button to send the character off to go loot the items in their queue.
+---
+
 ## Important Notes
 
 - This is an **early, rough version**—expect bugs
 - Some corpses may not be immediately lootable; use the `#corpsefix` command as a workaround
 - After queuing items, you may need to click **Loot Item(s)** again for any remaining queued items
-- **Debug command:** `/ti` shows the current queue (ItemID + CorpseID). An empty list means all queued items were successfully looted
-
----
-
-## Future Plans
-
-- Add INI configuration (window position, always-loot lists, etc.)
-- Integrate better navigation options (MQNav or alternatives to MQ2MMOWarp)
-- Additional polish and features
 
 ---
 
