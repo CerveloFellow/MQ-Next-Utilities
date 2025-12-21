@@ -211,9 +211,9 @@ local Navigation = {}
 
 function Navigation.navigateToLocation(x, y, z)
     if Config.useWarp then
-        mq.cmdf("/warp loc %d %d %d", y, x, z)
+        mq.cmdf("/squelch /warp loc %d %d %d", y, x, z)
     else
-        mq.cmdf("/nav locxyz %d %d %d", x, y, z)
+        mq.cmdf("/squelch /nav  locxyz %d %d %d", x, y, z)
     end
 end
 
@@ -271,13 +271,13 @@ function ItemEvaluator.shouldLoot(corpseItem)
     end
     
     -- Loot valuable items
-    if (corpseItem.Value() or 0) > 1000 then
+    if (corpseItem.Value() or 0) > 10000 then
         print("Value > 1000, looting.")
         return true
     end
     
     -- Loot valuable stackables
-    if corpseItem.Stackable() and (corpseItem.Value() or 0) >= 100 then
+    if corpseItem.Stackable() and (corpseItem.Value() or 0) >= 10000 then
         print("Stackable and value >= 100, looting.")
         return true
     end
@@ -494,9 +494,9 @@ function LootManager.openCorpse(corpseId)
     mq.cmdf("/target id %d", corpseId)
     
     if Config.useWarp then
-        mq.cmdf("/warp t")
+        mq.cmdf("/squelch /warp t")
     else
-        mq.cmdf("/nav target")
+        mq.cmdf("/squelch /nav  target")
     end
     
     mq.delay(500)
@@ -577,7 +577,7 @@ function LootManager.doLoot(isMaster)
     
     -- Main looting loop
     repeat
-        local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200")())
+        local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 100 zradius 10")())
         local currentCorpse
         currentCorpse, corpseTable = CorpseManager.getNearestCorpse(corpseTable)
         
