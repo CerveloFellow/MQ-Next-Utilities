@@ -596,7 +596,7 @@ function LootManager.doLoot(isMaster)
     
     -- Main looting loop
     repeat
-        local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 100 zradius 10")())
+        local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
         local currentCorpse
         currentCorpse, corpseTable = CorpseManager.getNearestCorpse(corpseTable)
         
