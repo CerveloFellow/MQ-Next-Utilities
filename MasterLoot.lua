@@ -5,12 +5,12 @@ local imgui = require('ImGui')
 -- Configuration
 -- ============================================================================
 local Config = {
-    chatConfig = "/djoin classLoot",
-    chatChannel = "/dgtell classLoot ",
     defaultAllowCombatLooting = false,
     defaultSlotsToKeepFree = 2,
     lootRadius = 50,
     useWarp = true,
+    lootStackableMinValue = 1000,
+    lootSingleMinValue = 10000,
     iniFile = mq.configDir .. '/MasterLoot.ini',
     itemsToKeep = {},
     itemsToShare = {},
@@ -18,7 +18,7 @@ local Config = {
 }
 
 -- ============================================================================
--- INI Management Module
+-- INI Management Module (Updated)
 -- ============================================================================
 local INIManager = {}
 
@@ -59,6 +59,7 @@ function INIManager.saveItemList(section, items)
 end
 
 function INIManager.loadSettings()
+    -- Load UseWarp setting
     local useWarpValue = mq.TLO.Ini.File(Config.iniFile).Section('Settings').Key('UseWarp').Value()
     
     if useWarpValue ~= nil and useWarpValue ~= 'NULL' and useWarpValue ~= '' then
@@ -68,11 +69,38 @@ function INIManager.loadSettings()
         -- Save default value if not present
         INIManager.saveSettings()
     end
+    
+    -- Load lootStackableMinValue
+    local stackableValue = mq.TLO.Ini.File(Config.iniFile).Section('Settings').Key('LootStackableMinValue').Value()
+    
+    if stackableValue ~= nil and stackableValue ~= 'NULL' and stackableValue ~= '' then
+        Config.lootStackableMinValue = tonumber(stackableValue)
+        print(string.format("Loaded LootStackableMinValue: %d", Config.lootStackableMinValue))
+    else
+        -- Save default value if not present
+        INIManager.saveSettings()
+    end
+    
+    -- Load lootSingleMinValue
+    local singleValue = mq.TLO.Ini.File(Config.iniFile).Section('Settings').Key('LootSingleMinValue').Value()
+    
+    if singleValue ~= nil and singleValue ~= 'NULL' and singleValue ~= '' then
+        Config.lootSingleMinValue = tonumber(singleValue)
+        print(string.format("Loaded LootSingleMinValue: %d", Config.lootSingleMinValue))
+    else
+        -- Save default value if not present
+        INIManager.saveSettings()
+    end
 end
 
 function INIManager.saveSettings()
     mq.cmdf('/ini "%s" "Settings" "UseWarp" "%s"', Config.iniFile, tostring(Config.useWarp))
+    mq.cmdf('/ini "%s" "Settings" "LootStackableMinValue" "%d"', Config.iniFile, Config.lootStackableMinValue)
+    mq.cmdf('/ini "%s" "Settings" "LootSingleMinValue" "%d"', Config.iniFile, Config.lootSingleMinValue)
+    
     print(string.format("Saved UseWarp setting: %s", tostring(Config.useWarp)))
+    print(string.format("Saved LootStackableMinValue: %d", Config.lootStackableMinValue))
+    print(string.format("Saved LootSingleMinValue: %d", Config.lootSingleMinValue))
 end
 
 function INIManager.initializeINI()
@@ -115,7 +143,7 @@ function INIManager.initializeINI()
         local defaultIgnore = {
             "Rusty Shortsword"
         }
-        -- ItemsToIgnore starts empty
+        -- ItemsToIgnore starts with default
         INIManager.saveItemList('ItemsToIgnore', defaultIgnore)
     end
 end
@@ -158,9 +186,6 @@ function Utils.ownItem(itemName)
     return itemCount > 0
 end
 
-function Utils.chatMessage(message)
-    return string.format("%s %s", Config.chatChannel, message)
-end
 
 function Utils.multimapInsert(map, key, value)
     if map[key] == nil then
@@ -242,14 +267,12 @@ function ItemEvaluator.shouldLoot(corpseItem)
     -- Check if player can use the item
 
     if Config.itemsToIgnore  and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
-        print("Item is in ignore list, skipping.")
         return false
     end
 
     if corpseItem.CanUse() then
         -- Skip lore items we already own
         if corpseItem.Lore() and Utils.ownItem(corpseItem.Name()) then
-            print("Item is Lore and I already own one, skipping.")
             return false
         end
         
@@ -264,27 +287,23 @@ function ItemEvaluator.shouldLoot(corpseItem)
         -- Loot wearable items
         for i = 1, corpseItem.WornSlots() do
             if corpseItem.WornSlot(i).ID() < 23 then
-                print("Item is wearable and usable, looting.")
                 return true
             end
         end
     end
     
     -- Loot valuable items
-    if (corpseItem.Value() or 0) > 10000 then
-        print("Value > 1000, looting.")
+    if (corpseItem.Value() or 0) > Config.lootSingleMinValue then
         return true
     end
     
     -- Loot valuable stackables
-    if corpseItem.Stackable() and (corpseItem.Value() or 0) >= 10000 then
-        print("Stackable and value >= 100, looting.")
+    if corpseItem.Stackable() and (corpseItem.Value() or 0) >= Config.lootSingleMinValue then
         return true
     end
     
     -- Check items to keep list
     if Utils.contains(Config.itemsToKeep, corpseItem.Name()) then
-        print("Item is in keep list, looting.")
         return true
     end
     
@@ -352,7 +371,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
     mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
     
     if not mq.TLO.Window("LootWnd").Open() then
-        mq.cmdf("/g Could not loot targeted corpse, skipping.")
+        mq.cmdf("/g Could not loot targeted corpse id(%d), skipping.", corpseObject.ID())
         return
     end
     
@@ -389,11 +408,11 @@ end
 function LootManager.lootItem(corpseItem, slotIndex)
     mq.cmdf('/g ' .. corpseItem.ItemLink('CLICKABLE')())
     mq.cmdf("/shift /itemnotify loot%d rightmouseup", slotIndex)
-    mq.delay(500)
+    mq.delay(300)
     
     if mq.TLO.Window("QuantityWnd").Open() then
         mq.cmdf("/notify QuantityWnd QTYW_Accept_Button leftmouseup")
-        mq.delay(300)
+        mq.delay(250)
     end
 end
 
@@ -490,7 +509,7 @@ end
 
 function LootManager.openCorpse(corpseId)
     mq.cmd("/say #corpsefix")
-    mq.delay(500)
+    mq.delay(300)
     mq.cmdf("/target id %d", corpseId)
     
     if Config.useWarp then
@@ -499,7 +518,7 @@ function LootManager.openCorpse(corpseId)
         mq.cmdf("/squelch /nav  target")
     end
     
-    mq.delay(500)
+    mq.delay(300)
     mq.cmdf("/loot")
     
     local retryCount = 0
@@ -507,7 +526,7 @@ function LootManager.openCorpse(corpseId)
 
     while not mq.TLO.Window("LootWnd").Open() and (retryCount < retryMax) do
         mq.cmdf("/squelch /say #corpsefix")
-        mq.delay(500)
+        mq.delay(300)
         retryCount = retryCount + 1
     end
 
@@ -541,7 +560,7 @@ function LootManager.processQueuedItemsInCorpse(items, corpseItemCount)
 
                 print("Removing queued item idx2: " .. tostring(idx2))
                 items[idx2] = nil
-                mq.delay(500)
+                mq.delay(300)
             end
             
             idx2 = nextIdx2
@@ -590,11 +609,15 @@ function LootManager.doLoot(isMaster)
                 math.floor(currentCorpse.Z)
             )
             
-            mq.delay("2s")
+            if Config.useWarp then
+                mq.delay(500)
+            else
+                mq.delay("2s")
+            end
             LootManager.lootCorpse(currentCorpse, isMaster)
             currentCorpse, corpseTable = CorpseManager.getNearestCorpse(corpseTable)
         end
-    until mq.TLO.SpawnCount("npccorpse radius 200")() == 0
+    until mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")() == 0
     
     -- Return to starting location
     Navigation.navigateToLocation(startingLocation.X, startingLocation.Y, startingLocation.Z)
@@ -644,7 +667,7 @@ function GUI.createGUI()
     return function(open)
         local main_viewport = imgui.GetMainViewport()
         imgui.SetNextWindowPos(main_viewport.WorkPos.x + 800, main_viewport.WorkPos.y + 20, ImGuiCond.Once)
-        imgui.SetNextWindowSize(450, 280, ImGuiCond.Always)
+        imgui.SetNextWindowSize(475, 245, ImGuiCond.Always)
         
         local show
         open, show = imgui.Begin("Master Looter", open)
@@ -657,15 +680,14 @@ function GUI.createGUI()
         GUI.initializeDefaults()
         
         imgui.PushItemWidth(imgui.GetFontSize() * -12)
-        
-        GUI.renderNavigationToggle()
-        imgui.Separator()
+
         GUI.renderActionButtons()
         imgui.Separator()
         GUI.renderGroupMemberSelection()
         imgui.Separator()
         GUI.renderItemListBox()
-        
+
+
         imgui.SameLine()
         imgui.Spacing()
         imgui.PopItemWidth()
@@ -686,17 +708,6 @@ function GUI.initializeDefaults()
     
     if LootManager.listboxSelectedOption == nil and next(LootManager.multipleUseTable) ~= nil then
         LootManager.listboxSelectedOption = {}
-    end
-end
-
-function GUI.renderNavigationToggle()
-    local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
-    if imgui.Button(warpLabel) then
-        Config.useWarp = not Config.useWarp
-        INIManager.saveSettings()
-        local mode = Config.useWarp and "WARP" or "NAV"
-        print("Navigation mode changed to: " .. mode)
-        mq.cmdf("/g Navigation mode: " .. mode)
     end
 end
 
@@ -724,6 +735,16 @@ function GUI.renderActionButtons()
     imgui.SameLine()
     if imgui.Button("Reload INI") then
         INIManager.reloadConfig()
+    end
+
+    imgui.SameLine()
+    local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
+    if imgui.Button(warpLabel) then
+        Config.useWarp = not Config.useWarp
+        INIManager.saveSettings()
+        local mode = Config.useWarp and "WARP" or "NAV"
+        print("Navigation mode changed to: " .. mode)
+        mq.cmdf("/g Navigation mode: " .. mode)
     end
     ImGui.SetWindowFontScale(1.0)
 end
@@ -802,7 +823,11 @@ end
 function GUI.renderItemListBox()
     imgui.SetNextItemWidth(300)
 
-    if imgui.BeginListBox("") then
+    -- Get the height of one item and subtract it
+    local itemHeight = imgui.GetTextLineHeightWithSpacing()
+    local height = -itemHeight*2  -- Negative value means "use remaining space minus this amount"
+
+    if imgui.BeginListBox("", 0, height) then
         for idx, items in pairs(LootManager.multipleUseTable) do
             for idx2, tbl in ipairs(items) do
                 local isSelected = false
@@ -877,9 +902,6 @@ mq.bind("/mlrc", INIManager.reloadConfig)
 
 -- Register events
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", LootManager.queueItem)
-
--- Join chat channel
-mq.cmdf(Config.chatConfig)
 
 -- Register GUI
 ImGui.Register('masterLootGui', GUI.createGUI())
