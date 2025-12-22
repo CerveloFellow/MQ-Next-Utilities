@@ -366,12 +366,16 @@ LootManager.listboxSelectedOption = {}
 
 function LootManager.lootCorpse(corpseObject, isMaster)
     mq.cmdf("/target id %d", corpseObject.ID)
+
+    if((mq.TLO.Target.ID() or 0)==0) then
+        return
+    end
     mq.cmdf("/loot")
     
     mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
     
     if not mq.TLO.Window("LootWnd").Open() then
-        mq.cmdf("/g Could not loot targeted corpse id(%d), skipping.", corpseObject.ID())
+        mq.cmdf("/g Could not loot targeted corpse id(%d), skipping.", corpseObject.ID)
         return
     end
     
