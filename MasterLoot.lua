@@ -263,29 +263,39 @@ function ItemEvaluator.groupMembersCanUse(corpseItem)
     return count
 end
 
+function ItemEvaluator.skipItem(corpseItem)
+    if Config.itemsToIgnore  and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
+        print("Item to ignore - Skip"..corpseItem.Name())
+        return true
+    end
+end
+
 function ItemEvaluator.shouldLoot(corpseItem)
     -- Check if player can use the item
 
     if Config.itemsToIgnore  and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
+        --print("Item to ignore - Skip"..corpseItem.Name())
         return false
     end
 
     if corpseItem.CanUse() then
         -- Skip lore items we already own
         if corpseItem.Lore() and Utils.ownItem(corpseItem.Name()) then
+            --print("Lore Item and I own it - Skip")
             return false
         end
         
         -- Skip No Drop/No Trade items multiple group members can use
         if (corpseItem.NoDrop() or corpseItem.NoTrade()) and 
            (ItemEvaluator.groupMembersCanUse(corpseItem) > 1) then
-            print("Item is No Drop/No Trade and multiple group members can use, skipping.")
+            --print("Item is No Drop/No Trade and multiple group members can use, skipping.")
             mq.cmdf('/g ***' .. corpseItem.ItemLink('CLICKABLE')() .. '*** can be used by multiple classes')
             return false
         end
         
         -- Loot wearable items
         for i = 1, corpseItem.WornSlots() do
+            --print("Item is worse slot item - Looting")
             if corpseItem.WornSlot(i).ID() < 23 then
                 return true
             end
@@ -294,11 +304,13 @@ function ItemEvaluator.shouldLoot(corpseItem)
     
     -- Loot valuable items
     if (corpseItem.Value() or 0) > Config.lootSingleMinValue then
+        --print("Value greater than single item min value - Looting")
         return true
     end
     
     -- Loot valuable stackables
     if corpseItem.Stackable() and (corpseItem.Value() or 0) >= Config.lootSingleMinValue then
+        --print("Value greater than stacked item min value - Looting")
         return true
     end
     
@@ -319,7 +331,7 @@ function CorpseManager.getCorpseTable(numCorpses)
     local corpseTable = {}
     
     for i = 1, numCorpses do
-        local spawn = mq.TLO.NearestSpawn(i, "npccorpse radius 200")
+        local spawn = mq.TLO.NearestSpawn(i, "npccorpse radius 200 zradius 10")
         local corpse = {
             ID = spawn.ID(),
             Name = spawn.Name(),
@@ -363,22 +375,48 @@ local LootManager = {}
 LootManager.multipleUseTable = {}
 LootManager.myQueuedItems = {}
 LootManager.listboxSelectedOption = {}
+LootManager.lootedCorpses = {}
+
+function LootManager.isLooted(corpseId)
+    return Utils.contains(LootManager.lootedCorpses, corpseId)
+end
 
 function LootManager.lootCorpse(corpseObject, isMaster)
     mq.cmdf("/target id %d", corpseObject.ID)
 
     if((mq.TLO.Target.ID() or 0)==0) then
+        table.insert(LootManager.lootedCorpses, corpseObject.ID)
         return
     end
     mq.cmdf("/loot")
     
     mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
     
-    if not mq.TLO.Window("LootWnd").Open() then
-        mq.cmdf("/g Could not loot targeted corpse id(%d), skipping.", corpseObject.ID)
-        return
+    local retryCount = 0
+    local maxRetries = 3
+
+    if (not mq.TLO.Window("LootWnd").Open()) then
+        while retryCount < maxRetries do
+            mq.cmdf("/g Could not loot targeted corpse id(%d), retrying.", corpseObject.ID)
+            mq.cmdf("/squelch /say #corpsefix")
+            mq.delay(500)
+            --mq.cmdf("/warp t %d", corpseObject.ID)
+            mq.cmdf("/warp loc %f %f %f", corpseObject.Y, corpseObject.X, corpseObject.Z)
+            retryCount = retryCount + 1
+            
+            -- Check if the loot window opened after the retry
+            if mq.TLO.Window("LootWnd").Open() then
+                break
+            end
+        end
+        
+        -- Optional: Handle the case where all retries failed
+        if retryCount >= maxRetries and not mq.TLO.Window("LootWnd").Open() then
+            mq.cmdf("/g Failed to loot corpse id(%d) after %d attempts.", corpseObject.ID, maxRetries)
+            return
+        end
     end
-    
+
     local itemCount = tonumber(mq.TLO.Corpse.Items()) or 0
     
     if itemCount == 0 then
@@ -393,11 +431,11 @@ function LootManager.lootCorpse(corpseObject, isMaster)
         local corpseItem = mq.TLO.Corpse.Item(i)
         local isSharedItem = Utils.contains(Config.itemsToShare, corpseItem.Name())
 
-        if ItemEvaluator.shouldLoot(corpseItem) and not isSharedItem then
+        if ItemEvaluator.shouldLoot(corpseItem) and (not isSharedItem) then
             LootManager.lootItem(corpseItem, i)
         else
-            if isMaster and (ItemEvaluator.groupMembersCanUse(corpseItem) > 1 or isSharedItem) then
-                LootManager.addToMultipleUseTable(corpseObject, corpseItem)
+            if (ItemEvaluator.groupMembersCanUse(corpseItem) > 1 or isSharedItem) and (not ItemEvaluator.skipItem(corpseItem)) then
+                mq.cmdf("/squelch /g mlsi %d %d \"%s\"", corpseObject.ID, corpseItem.ID(), corpseItem.Name())
             end
         end
         
@@ -406,7 +444,9 @@ function LootManager.lootCorpse(corpseObject, isMaster)
         end
     end
     
+    table.insert(LootManager.lootedCorpses, corpseObject.ID)
     LootManager.closeLootWindow()
+    return true
 end
 
 function LootManager.lootItem(corpseItem, slotIndex)
@@ -434,6 +474,25 @@ function LootManager.closeLootWindow()
         mq.cmdf("/notify LootWnd LW_DoneButton leftmouseup")
         mq.delay(100)
     end
+end
+
+function LootManager.shareLootItem(line, pCorpseId, pItemId, pItemName)
+    local item = {
+        corpseId = pCorpseId,
+        itemId = pItemId,
+        itemName = pItemName,
+        itemObject = {}
+    }
+
+    if next(LootManager.listboxSelectedOption) == nil then
+        LootManager.listboxSelectedOption = {
+            corpseId = pCorpseId,
+            itemId = pItemId,
+            itemName = pItemName
+        }
+    end
+    
+    Utils.multimapInsert(LootManager.multipleUseTable, pCorpseId, item)
 end
 
 function LootManager.addToMultipleUseTable(corpseObject, corpseItem)
@@ -465,8 +524,19 @@ function LootManager.printMultipleUseItems()
     
     for _, items in pairs(LootManager.multipleUseTable) do
         for _, tbl in ipairs(items) do
-            mq.cmdf('/g  ' .. tbl.itemObject.ItemLink('CLICKABLE')())
-            print(tbl.itemObject.ItemLink('CLICKABLE')())
+            if tbl.itemObject then
+                local success, itemLink = pcall(function() 
+                    return tbl.itemObject.ItemLink('CLICKABLE')
+                end)
+                
+                if success and itemLink and type(itemLink) == 'function' then
+                    local clickableLink = itemLink()
+                    if clickableLink and clickableLink ~= '' then
+                        mq.cmdf('/g  ' .. clickableLink)
+                        print(clickableLink)
+                    end
+                end
+            end 
         end
     end
 end
@@ -515,9 +585,13 @@ function LootManager.openCorpse(corpseId)
     mq.cmd("/say #corpsefix")
     mq.delay(300)
     mq.cmdf("/target id %d", corpseId)
-    
+    if((mq.TLO.Target.ID() or 0)==0) then
+        return
+    end
+
     if Config.useWarp then
-        mq.cmdf("/squelch /warp t")
+        --mq.cmdf("/squelch /warp t")
+        mq.cmdf("/warp loc %f %f %f", mq.TLO.Target.Y(), mq.TLO.Target.X(), mq.TLO.Target.Z())
     else
         mq.cmdf("/squelch /nav  target")
     end
@@ -530,6 +604,13 @@ function LootManager.openCorpse(corpseId)
 
     while not mq.TLO.Window("LootWnd").Open() and (retryCount < retryMax) do
         mq.cmdf("/squelch /say #corpsefix")
+        mq.delay(300)
+        if Config.useWarp then
+            --mq.cmdf("/squelch /warp t")
+            mq.cmdf("/warp loc %f %f %f", mq.TLO.Target.Y(), mq.TLO.Target.X(), mq.TLO.Target.Z())
+        else
+            mq.cmdf("/squelch /nav  target")
+        end
         mq.delay(300)
         retryCount = retryCount + 1
     end
@@ -599,14 +680,12 @@ function LootManager.doLoot(isMaster)
     mq.delay(500)
     
     -- Main looting loop
-    repeat
-        local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
-        local currentCorpse
-        currentCorpse, corpseTable = CorpseManager.getNearestCorpse(corpseTable)
+    local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
+
+    for i = 1, #corpseTable do
+        local currentCorpse = corpseTable[i]
         
-        while currentCorpse do
-            mq.cmdf("/squelch /hidecor looted")
-            
+        if currentCorpse and not LootManager.isLooted(currentCorpse.ID) then
             Navigation.navigateToLocation(
                 math.floor(currentCorpse.X),
                 math.floor(currentCorpse.Y),
@@ -619,15 +698,14 @@ function LootManager.doLoot(isMaster)
                 mq.delay("2s")
             end
             LootManager.lootCorpse(currentCorpse, isMaster)
-            currentCorpse, corpseTable = CorpseManager.getNearestCorpse(corpseTable)
         end
-    until mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")() == 0
+    end
     
     -- Return to starting location
     Navigation.navigateToLocation(startingLocation.X, startingLocation.Y, startingLocation.Z)
     mq.delay(startingLocation.timeToWait)
     
-    LootManager.printMultipleUseItems()
+    -- LootManager.printMultipleUseItems()
     
     mq.cmdf("/g " .. mq.TLO.Me.Name() .. " is done Looting")
 end
@@ -717,22 +795,22 @@ end
 
 function GUI.renderActionButtons()
     ImGui.SetWindowFontScale(0.7)
-    if imgui.Button("Master Loot") then
-        mq.cmdf("/mlml")
-    end
+    -- if imgui.Button("Master Loot") then
+    --     mq.cmdf("/mlml")
+    -- end
     
-    imgui.SameLine()
-    if imgui.Button("Peer Loot") then
+    -- imgui.SameLine()
+    if imgui.Button("Loot") then
         GUI.executePeerLoot()
     end
     
     imgui.SameLine()
-    if imgui.Button("Queue Item") then
+    if imgui.Button("Queue Shared Item") then
         GUI.executeQueueItem()
     end
 
     imgui.SameLine()
-    if imgui.Button("Loot Item(s)") then
+    if imgui.Button("Get Shared Item(s)") then
         GUI.executeLootItems()
     end
     
@@ -750,18 +828,21 @@ function GUI.renderActionButtons()
         print("Navigation mode changed to: " .. mode)
         mq.cmdf("/g Navigation mode: " .. mode)
     end
+
+    imgui.SameLine()
+    if imgui.Button("Clear Shared List") then
+        LootManager.multipleUseTable = {}
+    end
     ImGui.SetWindowFontScale(1.0)
 end
 
 function GUI.executePeerLoot()
     if GUI.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
         mq.cmdf("/say #corpsefix")
-        mq.cmdf("/hidecorpse none")
-        mq.cmdf("/mlpl")
+        mq.cmdf("/mlml")
     else
         mq.cmdf("/dex %s /say #corpsefix", GUI.groupMemberSelected)
-        mq.cmdf("/dex %s /hidecorpse none", GUI.groupMemberSelected)
-        mq.cmdf("/dex %s /mlpl", GUI.groupMemberSelected)
+        mq.cmdf("/dex %s /mlml", GUI.groupMemberSelected)
     end
 end
 
@@ -794,11 +875,9 @@ end
 function GUI.executeLootItems()
     if GUI.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
         mq.cmdf("/say #corpsefix")
-        mq.cmdf("/hidecorpse none")
         mq.cmdf("/mlli")
     else
         mq.cmdf("/dex %s /say #corpsefix", GUI.groupMemberSelected)
-        mq.cmdf("/dex %s /hidecorpse none", GUI.groupMemberSelected)
         mq.cmdf("/dex %s /mlli", GUI.groupMemberSelected)
     end
 end
@@ -868,10 +947,63 @@ function Commands.stopScript()
     Commands.loopBoolean = false
 end
 
+function Commands.ReportUnlootedCorpses(line)
+    -- Get all corpses within radius
+    local nearbyCorpses = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
+    
+    -- Find corpses that are NOT in the looted list
+    local unlootedCorpses = {}
+    for i, corpse in ipairs(nearbyCorpses) do
+        local isLooted = false
+        for j, lootedCorpse in ipairs(LootManager.lootedCorpses) do
+            if corpse.ID == lootedCorpse then
+                isLooted = true
+                break
+            end
+        end
+        
+        if not isLooted then
+            table.insert(unlootedCorpses, corpse)
+        end
+    end
+    
+    -- Print unlooted corpses
+    mq.cmdf("/g "..mq.TLO.Me.Name().." unlooted corpses: " .. #unlootedCorpses)
+    for i, corpse in ipairs(unlootedCorpses) do
+        mq.cmdf("/g "..mq.TLO.Me.Name().."'s unlooted corpse: " .. tostring(corpse.ID))
+    end
+end
+
 function Commands.testItem()
-    print("Testing Item: " .. mq.TLO.Cursor.Name())
-    local result = ItemEvaluator.shouldLoot(mq.TLO.Cursor)
-    print("Result: " .. tostring(result))
+    print("Testing looted corpses")
+    print("Number of looted corpses: " .. #LootManager.lootedCorpses)
+    
+    -- Get all corpses within radius
+    local nearbyCorpses = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
+
+    print("Number of nearby corpses: " .. #nearbyCorpses)
+    
+    -- Find corpses that are NOT in the looted list
+    local unlootedCorpses = {}
+    for i, corpse in ipairs(nearbyCorpses) do
+        local isLooted = false
+        for j, lootedCorpse in ipairs(LootManager.lootedCorpses) do
+            if corpse.ID == lootedCorpse then
+                isLooted = true
+                break
+            end
+        end
+        
+        if not isLooted then
+            table.insert(unlootedCorpses, corpse)
+        end
+    end
+    
+    -- Print unlooted corpses
+    print("Number of unlooted corpses: " .. #unlootedCorpses)
+    for i, corpse in ipairs(unlootedCorpses) do
+        print("Unlooted corpse: " .. tostring(corpse.ID))
+    end
 end
 
 function Commands.masterLoot()
@@ -898,15 +1030,16 @@ mq.cmdf("/lootnodrop never")
 
 -- Register commands
 mq.bind("/mlml", Commands.masterLoot)
-mq.bind("/mlpl", Commands.peerLoot)
 mq.bind("/mlli", LootManager.lootQueuedItems)
 mq.bind("/mlsl", Commands.stopScript)
 mq.bind("/ti", Commands.testItem)
 mq.bind("/mlrc", INIManager.reloadConfig)
+mq.bind("/mlru", Commands.ReportUnlootedCorpses)
 
 -- Register events
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", LootManager.queueItem)
-
+mq.event('shareLootItem', "#*#mlsi #1# #2# \"#3#\"'", LootManager.shareLootItem)
+mq.event('reportUnlooted', '#*#mlru#*#', Commands.ReportUnlootedCorpses)
 -- Register GUI
 ImGui.Register('masterLootGui', GUI.createGUI())
 
