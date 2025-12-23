@@ -34,35 +34,37 @@ The first time you run the script, if an INI file is not present, one will be cr
 - Select a group member from the radio buttons and that group member will start looting any corpses that it has not looted
 - The group member will only loot items that no one else in the group can use, or items that can be traded to each other
 - The INI file settings will be applied
-- -Any ItemsToKeep are ALWAYS looted by any of the looters
-- -Any ItemsToShare are never looted and reported to the loot window
-- -Any ItemsToIgnore are not looted and ignored.
+- Any ItemsToKeep are ALWAYS looted by any of the looters
+- Any ItemsToShare are never looted and reported to the loot window and these items should be linked in group chat so you can inspect them
+- Any ItemsToIgnore are not looted and ignored.
+- Any items that are flagged as ItemsToShare or can be used by other group members will be sent to the Loot Window
 
 ### Queue Shared Item
-- After master looting, select a group member and an item from the displayed list
-- Queue the item for that character to loot (ignores No Trade/No Drop restrictions)
+- When you select an item from the Loot Window, select a character and press this button, it will queue that item up for the character to loot
+- Multiple items can be queued to multiple characters before sending them off to loot them
 
-### Loot Item(s)
-- Commands the selected character to loot everything currently queued for them
+### Get Shared Item(s)
+- Commands the selected character to go and loot the items that were queued up from the Queue Shared Items button
 
 ---
 
 ## How to use
 
-After all the mobs are dead, I will typically use Peer Loot for all of my bot characters which will have them go through and loot any items that only they can use, or are in the [ItemsToKeep] section.  Next i will do Master Loot with my main character who will loot only things that they can use similar to Peer Loot.  Master Loot will make a list of items that are usable by 2 or more people in your group and display them in the listbox in the window, and also print them out to your group(/g) chat.  From there you can inspect objects and determine which character you want to loot it.  You would select the character's radio button, select the item in the list box, and then press the Queue Item button which will add it to that characters queue to loot(while removing it from the list).  Once all items are queued up, you select a character and press the Loot Item(s) button to send the character off to go loot the items in their queue.
+I typically have each character go through and loot, usually my driver character first.  
 ---
 
 ## Important Notes
 
 - This is an **early, rough version**—expect bugs
-- Some corpses may not be immediately lootable; use the `#corpsefix` command as a workaround
-- After queuing items, you may need to click **Loot Item(s)** again for any remaining queued items
+- There are issues with trying to open the loot window.  #corpsefix is used judiciously in the code along with retries.  That being said there are still instances where a character cannot loot a corpse and the character should report that it cannot loot that corpse.
+- You can issue the "/g mlru" command which will tell each character to report unlooted corpse numbers.
+- If a character cannot loot a corpse you might have to manually target and loot the corpse.  use /target t <corpseId>, /warp t, /loot.  Sometimes you can reissue the Loot or Get Shared Item(s) command and they will loot on retry.
 
 ---
 
 ## Requirements
 
-- **MQ2MMOWarp plugin** (required for warping to corpses during looting)
+- **MQ2MMOWarp or MQ2Nav** - these are used to move around using /warp loc y x z or /nav locxyz x y z commands.
 
 ---
 
