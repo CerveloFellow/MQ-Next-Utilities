@@ -58,8 +58,8 @@ The first time you run the script, if an INI file is not present, one will be cr
 ---
 
 ## How to use
-
-I typically have each character go through and loot, usually my driver character first.  
+- After killing a bunch of mobs, I typically start with my driver, and loot all the corpses with that character, waiting for them to complete.   I then move through the character list and have each character loot.  When multiple characters are looting at the same time, you run into a higher chance of coming across a corpse that you cannot open the Corpse Window for, hence why I typically wait for each character to complete unless there are hundreds of corpses and than I'll send each character as fast as I can.
+- The corpse ID's are retained so each character knows which corpses they have looted, and will not attempt to loot that corpse again if you issue the loot command.   
 ---
 
 ## Important Notes
