@@ -236,7 +236,7 @@ local Navigation = {}
 
 function Navigation.navigateToLocation(x, y, z)
     if Config.useWarp then
-        mq.cmdf("/squelch /warp loc %d %d %d", y, x, z)
+        mq.cmdf("/squelch /warp loc %f %f %f", y, x, z)
     else
         mq.cmdf("/squelch /nav  locxyz %d %d %d", x, y, z)
     end
@@ -377,6 +377,17 @@ LootManager.myQueuedItems = {}
 LootManager.listboxSelectedOption = {}
 LootManager.lootedCorpses = {}
 
+function LootManager.printMultipleUseItems()
+    for corpseId, items in pairs(LootManager.multipleUseTable) do
+    -- items is a table/array of item entries for this corpse
+    for _, item in ipairs(items) do
+        -- Access the itemObject and call ItemLink
+        local itemLink = item.itemObject.ItemLink('CLICKABLE')
+        mq.cmdf("/g "..itemLink)
+    end
+end
+end
+
 function LootManager.isLooted(corpseId)
     return Utils.contains(LootManager.lootedCorpses, corpseId)
 end
@@ -481,7 +492,7 @@ function LootManager.shareLootItem(line, pCorpseId, pItemId, pItemName)
         corpseId = pCorpseId,
         itemId = pItemId,
         itemName = pItemName,
-        itemObject = {}
+        itemObject = mq.TLO.FindItem("=" .. pItemId) or {}
     }
 
     if next(LootManager.listboxSelectedOption) == nil then
@@ -519,8 +530,8 @@ function LootManager.printMultipleUseItems()
         return
     end
 
+    print(#LootManager.multipleUseTable)
     mq.cmdf('/g *** Multi Class No Drop/No Trade Items ***')
-    print('*** Multi Class No Drop/No Trade Items ***')
     
     for _, items in pairs(LootManager.multipleUseTable) do
         for _, tbl in ipairs(items) do
@@ -687,9 +698,9 @@ function LootManager.doLoot(isMaster)
         
         if currentCorpse and not LootManager.isLooted(currentCorpse.ID) then
             Navigation.navigateToLocation(
-                math.floor(currentCorpse.X),
-                math.floor(currentCorpse.Y),
-                math.floor(currentCorpse.Z)
+                currentCorpse.X,
+                currentCorpse.Y,
+                currentCorpse.Z
             )
             
             if Config.useWarp then
@@ -969,9 +980,9 @@ function Commands.ReportUnlootedCorpses(line)
     
     -- Print unlooted corpses
     mq.cmdf("/g "..mq.TLO.Me.Name().." unlooted corpses: " .. #unlootedCorpses)
-    for i, corpse in ipairs(unlootedCorpses) do
-        mq.cmdf("/g "..mq.TLO.Me.Name().."'s unlooted corpse: " .. tostring(corpse.ID))
-    end
+    -- for i, corpse in ipairs(unlootedCorpses) do
+    --     mq.cmdf("/g                             "..mq.TLO.Me.Name().."'s unlooted corpse: (" .. tostring(corpse.ID)..")")
+    -- end
 end
 
 function Commands.testItem()
@@ -1035,6 +1046,7 @@ mq.bind("/mlsl", Commands.stopScript)
 mq.bind("/ti", Commands.testItem)
 mq.bind("/mlrc", INIManager.reloadConfig)
 mq.bind("/mlru", Commands.ReportUnlootedCorpses)
+mq.bind("/mlpm", LootManager.printMultipleUseItems)
 
 -- Register events
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", LootManager.queueItem)
