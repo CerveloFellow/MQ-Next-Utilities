@@ -59,6 +59,7 @@ The first time you run the script, if an INI file is not present, one will be cr
 
 ## How to use
 - After killing a bunch of mobs, I typically start with my driver, and loot all the corpses with that character, waiting for them to complete.   I then move through the character list and have each character loot.  When multiple characters are looting at the same time, you run into a higher chance of coming across a corpse that you cannot open the Corpse Window for, hence why I typically wait for each character to complete unless there are hundreds of corpses and than I'll send each character as fast as I can.
+- When the characters come across items that are in the ItemsToShare list, or items that other group members can use, they will report that to the Loot Window where I can inspect the item, and determine which character should take it.   I selec that character with the radio button, select the item from the Loot Window and press the "Queue Shared Item" list for that character.  Once I've assigned all the items to characters, I'll select a character, and press "Get Shared Item(s)" for that character.  They should go and lot the items.
 - The corpse ID's are retained so each character knows which corpses they have looted, and will not attempt to loot that corpse again if you issue the loot command.   
 ---
 
@@ -69,6 +70,9 @@ The first time you run the script, if an INI file is not present, one will be cr
 - You can issue the "/g mlru" command which will tell each character to report unlooted corpse numbers.
 - If a character cannot loot a corpse you might have to manually target and loot the corpse.  use /target t <corpseId>, /warp t, /loot.  Sometimes you can reissue the Loot or Get Shared Item(s) command and they will loot on retry.
 
+## Known Issues
+- When a single mob drops multiple instances of an item that can be used by other group members, it's only reported to the Loot Window once due to how the ImGui Listbox handles selecting items.  The fix for this is going to include creating an internal list with a unique ID for each item on the mob or something along those lines.
+- Character's opening corpses is flaky.  There's a command you can issue for each character(/ti) that will show what corpses haven't been looted and you can manually try to loot them.  You can alternatively use the /g mlru to just get a count from each character of which corpses haven't been looted.
 ---
 
 ## Requirements
