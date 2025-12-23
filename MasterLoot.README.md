@@ -25,20 +25,20 @@ The first time you run the script, if an INI file is not present, one will be cr
 |**[ItemsToIgnore]**|Any items in this list are always ignored and will never be looted|
 |**[Settings]**|This section contains configurable options for MasterLoot.lua|
 |**useWarp(true\false)**|True will use MQMMOWarp commands to warp to corpses, false will use MQNAV commands to navigate to corpses|
+|**LootStackableMinValue**|The minimum value in copper for a stackable item to always be looted|
+|**LootSingleMinValue**|The minimum value in copper for a single item to always be looted|
 
 ## Features
 
-### Master Loot
-- Automatically loots all "safe" items (anything not No Trade or No Drop)
-- Will always loot any items in the [ItemsToKeep] section
-- Will always share to the Loot Window any items in the [ItemsToShare] section
-- Will always ignore any items that are in the [ItemsToIgnore] section
+### Loot
+- Select a group member from the radio buttons and that group member will start looting any corpses that it has not looted
+- The group member will only loot items that no one else in the group can use, or items that can be traded to each other
+- The INI file settings will be applied
+- -Any ItemsToKeep are ALWAYS looted by any of the looters
+- -Any ItemsToShare are never looted and reported to the loot window
+- -Any ItemsToIgnore are not looted and ignored.
 
-### Peer Loot
-- Non-master group members automatically loot only items that no one else in the group can use
-- Ideal for quickly picking up class-specific tier gear
-
-### Queue Item
+### Queue Shared Item
 - After master looting, select a group member and an item from the displayed list
 - Queue the item for that character to loot (ignores No Trade/No Drop restrictions)
 
