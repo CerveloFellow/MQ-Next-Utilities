@@ -46,6 +46,15 @@ The first time you run the script, if an INI file is not present, one will be cr
 ### Get Shared Item(s)
 - Commands the selected character to go and loot the items that were queued up from the Queue Shared Items button
 
+### Reload INI
+- Reloads your INI file without restarting.  Useful if you modify your INI file settings.
+
+### Use Warp (On)/Use Nav (Off) 
+- Let's you manually toggle between using Warp and Nav for moving between corpses.   The useWarp setting in the INI file can be used to set your default preference.
+
+### Clear Shared List
+- Pressing this button will clear all the items in the Loot Window.
+  
 ---
 
 ## How to use
