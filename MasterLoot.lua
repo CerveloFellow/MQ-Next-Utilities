@@ -1,5 +1,6 @@
 local mq = require('mq')
 local imgui = require('ImGui')
+local actors = require('actors')
 
 -- ============================================================================
 -- Configuration
@@ -18,7 +19,66 @@ local Config = {
 }
 
 -- ============================================================================
--- INI Management Module (Updated)
+-- Actor Module
+-- ============================================================================
+local ActorManager = {}
+ActorManager.actorMailbox = nil
+ActorManager.handleShareItem = nil
+
+function ActorManager.initialize()
+    ActorManager.actorMailbox = actors.register('masterloot', function(message)
+        local actualMessage = message
+        if type(message) == "userdata" then
+            local success, result = pcall(function() return message() end)
+            if success and type(result) == "table" then
+                actualMessage = result
+            else
+                return
+            end
+        end
+        
+        if type(actualMessage) == "table" and actualMessage.type == 'shareItem' then
+            if ActorManager.handleShareItem then
+                ActorManager.handleShareItem(actualMessage)
+            end
+        end
+    end)
+    
+    if ActorManager.actorMailbox then
+        print("Actor mailbox registered: masterloot")
+    end
+end
+
+function ActorManager.setHandleShareItem(handlerFunc)
+    ActorManager.handleShareItem = handlerFunc
+end
+
+function ActorManager.broadcastShareItem(corpseId, itemId, itemName, itemLink)
+    local groupSize = (mq.TLO.Group.GroupSize() or 0) - 1
+    
+    if groupSize >= 0 then
+        for i = 0, groupSize do
+            local memberName = mq.TLO.Group.Member(i).Name()
+            
+            if memberName and memberName ~= mq.TLO.Me.Name() then
+                local message = {
+                    type = 'shareItem',
+                    corpseId = corpseId,
+                    itemId = itemId,
+                    itemName = itemName,
+                    itemLink = itemLink
+                }
+                
+                if ActorManager.actorMailbox then
+                    ActorManager.actorMailbox:send({to=memberName}, message)
+                end
+            end
+        end
+    end
+end
+
+-- ============================================================================
+-- INI Management Module
 -- ============================================================================
 local INIManager = {}
 
@@ -236,7 +296,7 @@ local Navigation = {}
 
 function Navigation.navigateToLocation(x, y, z)
     if Config.useWarp then
-        mq.cmdf("/squelch /warp loc %f %f %f", y, x, z)
+        mq.cmdf("/warp loc %f %f %f", y, x, z)
     else
         mq.cmdf("/squelch /nav  locxyz %d %d %d", x, y, z)
     end
@@ -377,15 +437,33 @@ LootManager.myQueuedItems = {}
 LootManager.listboxSelectedOption = {}
 LootManager.lootedCorpses = {}
 
-function LootManager.printMultipleUseItems()
-    for corpseId, items in pairs(LootManager.multipleUseTable) do
-    -- items is a table/array of item entries for this corpse
-    for _, item in ipairs(items) do
-        -- Access the itemObject and call ItemLink
-        local itemLink = item.itemObject.ItemLink('CLICKABLE')
-        mq.cmdf("/g "..itemLink)
+function LootManager.handleSharedItem(message)
+    local item = {
+        corpseId = message.corpseId,
+        itemId = message.itemId,
+        itemName = message.itemName,
+        itemLink = message.itemLink
+    }
+
+    if next(LootManager.listboxSelectedOption) == nil then
+        LootManager.listboxSelectedOption = {
+            corpseId = message.corpseId,
+            itemId = message.itemId,
+            itemName = message.itemName
+        }
     end
+    
+    Utils.multimapInsert(LootManager.multipleUseTable, message.corpseId, item)
 end
+
+function LootManager.printMultipleUseItems()
+    mq.cmdf("/g List of items that can be used by members of your group")
+    for key, valueList in pairs(LootManager.multipleUseTable) do
+        print("Key:", key)
+        for _, value in ipairs(valueList) do
+            mq.cmdf("/g %s", value.itemLink)
+        end
+    end
 end
 
 function LootManager.isLooted(corpseId)
@@ -409,7 +487,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
     if (not mq.TLO.Window("LootWnd").Open()) then
         while retryCount < maxRetries do
             mq.cmdf("/g Could not loot targeted corpse id(%d), retrying.", corpseObject.ID)
-            mq.cmdf("/squelch /say #corpsefix")
+            mq.cmdf("/say #corpsefix")
             mq.delay(500)
             --mq.cmdf("/warp t %d", corpseObject.ID)
             mq.cmdf("/warp loc %f %f %f", corpseObject.Y, corpseObject.X, corpseObject.Z)
@@ -446,7 +524,16 @@ function LootManager.lootCorpse(corpseObject, isMaster)
             LootManager.lootItem(corpseItem, i)
         else
             if (ItemEvaluator.groupMembersCanUse(corpseItem) > 1 or isSharedItem) and (not ItemEvaluator.skipItem(corpseItem)) then
-                mq.cmdf("/squelch /g mlsi %d %d \"%s\"", corpseObject.ID, corpseItem.ID(), corpseItem.Name())
+                -- Show the item link in group chat
+                mq.cmdf("/g "..corpseItem.ItemLink('CLICKABLE')())
+                
+                -- Use actors to broadcast the item to all group members
+                ActorManager.broadcastShareItem(
+                    corpseObject.ID, 
+                    corpseItem.ID(), 
+                    corpseItem.Name(), 
+                    corpseItem.ItemLink('CLICKABLE')()
+                )
             end
         end
         
@@ -487,25 +574,6 @@ function LootManager.closeLootWindow()
     end
 end
 
-function LootManager.shareLootItem(line, pCorpseId, pItemId, pItemName)
-    local item = {
-        corpseId = pCorpseId,
-        itemId = pItemId,
-        itemName = pItemName,
-        itemObject = mq.TLO.FindItem("=" .. pItemId) or {}
-    }
-
-    if next(LootManager.listboxSelectedOption) == nil then
-        LootManager.listboxSelectedOption = {
-            corpseId = pCorpseId,
-            itemId = pItemId,
-            itemName = pItemName
-        }
-    end
-    
-    Utils.multimapInsert(LootManager.multipleUseTable, pCorpseId, item)
-end
-
 function LootManager.addToMultipleUseTable(corpseObject, corpseItem)
     local item = {
         corpseId = corpseObject.ID,
@@ -523,33 +591,6 @@ function LootManager.addToMultipleUseTable(corpseObject, corpseItem)
     end
     
     Utils.multimapInsert(LootManager.multipleUseTable, corpseObject.ID, item)
-end
-
-function LootManager.printMultipleUseItems()
-    if LootManager.multipleUseTable == nil then
-        return
-    end
-
-    print(#LootManager.multipleUseTable)
-    mq.cmdf('/g *** Multi Class No Drop/No Trade Items ***')
-    
-    for _, items in pairs(LootManager.multipleUseTable) do
-        for _, tbl in ipairs(items) do
-            if tbl.itemObject then
-                local success, itemLink = pcall(function() 
-                    return tbl.itemObject.ItemLink('CLICKABLE')
-                end)
-                
-                if success and itemLink and type(itemLink) == 'function' then
-                    local clickableLink = itemLink()
-                    if clickableLink and clickableLink ~= '' then
-                        mq.cmdf('/g  ' .. clickableLink)
-                        print(clickableLink)
-                    end
-                end
-            end 
-        end
-    end
 end
 
 function LootManager.lootQueuedItems()
@@ -614,7 +655,7 @@ function LootManager.openCorpse(corpseId)
     local retryMax = 5
 
     while not mq.TLO.Window("LootWnd").Open() and (retryCount < retryMax) do
-        mq.cmdf("/squelch /say #corpsefix")
+        mq.cmdf("/say #corpsefix")
         mq.delay(300)
         if Config.useWarp then
             --mq.cmdf("/squelch /warp t")
@@ -677,7 +718,7 @@ function LootManager.doLoot(isMaster)
     }
     
     local stickState = false
-    LootManager.multipleUseTable = {}
+    --LootManager.multipleUseTable = {}
     LootManager.myQueuedItems = {}
     LootManager.listboxSelectedOption = {}
 
@@ -806,11 +847,7 @@ end
 
 function GUI.renderActionButtons()
     ImGui.SetWindowFontScale(0.7)
-    -- if imgui.Button("Master Loot") then
-    --     mq.cmdf("/mlml")
-    -- end
     
-    -- imgui.SameLine()
     if imgui.Button("Loot") then
         GUI.executePeerLoot()
     end
@@ -893,6 +930,10 @@ function GUI.executeLootItems()
     end
 end
 
+function GUI.executeReportUnlootedCorpses()
+    mq.cmdf("/g /mlru")
+end
+
 function GUI.renderGroupMemberSelection()
     local groupSize = (mq.TLO.Group.GroupSize() or 0) - 1
 
@@ -946,6 +987,20 @@ function GUI.renderItemListBox()
         end
         imgui.EndListBox()
     end
+    
+    -- Add Print Items button to the right of the listbox
+    imgui.SameLine()
+    ImGui.SetWindowFontScale(0.7)
+    imgui.BeginGroup()
+    if imgui.Button("Print Item Links") then
+        LootManager.printMultipleUseItems()
+    end
+
+    if imgui.Button("Print Unlooted\nCorpses") then
+        GUI.executeReportUnlootedCorpses()
+    end
+    imgui.EndGroup()
+    ImGui.SetWindowFontScale(1.0)
 end
 
 -- ============================================================================
@@ -980,45 +1035,27 @@ function Commands.ReportUnlootedCorpses(line)
     
     -- Print unlooted corpses
     mq.cmdf("/g "..mq.TLO.Me.Name().." unlooted corpses: " .. #unlootedCorpses)
-    -- for i, corpse in ipairs(unlootedCorpses) do
-    --     mq.cmdf("/g                             "..mq.TLO.Me.Name().."'s unlooted corpse: (" .. tostring(corpse.ID)..")")
-    -- end
 end
 
 function Commands.testItem()
-    print("Testing looted corpses")
-    print("Number of looted corpses: " .. #LootManager.lootedCorpses)
+    local corpseItem = mq.TLO.Cursor
     
-    -- Get all corpses within radius
-    local nearbyCorpses = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
+    if not corpseItem or corpseItem.ID() == 0 then
+        print("No item on cursor!")
+        return
+    end
 
-    print("Number of nearby corpses: " .. #nearbyCorpses)
+    mq.cmdf('/g Testing: ' .. corpseItem.ItemLink('CLICKABLE')())
     
-    -- Find corpses that are NOT in the looted list
-    local unlootedCorpses = {}
-    for i, corpse in ipairs(nearbyCorpses) do
-        local isLooted = false
-        for j, lootedCorpse in ipairs(LootManager.lootedCorpses) do
-            if corpse.ID == lootedCorpse then
-                isLooted = true
-                break
-            end
-        end
-        
-        if not isLooted then
-            table.insert(unlootedCorpses, corpse)
-        end
-    end
-    
-    -- Print unlooted corpses
-    print("Number of unlooted corpses: " .. #unlootedCorpses)
-    for i, corpse in ipairs(unlootedCorpses) do
-        print("Unlooted corpse: " .. tostring(corpse.ID))
-    end
+    ActorManager.broadcastShareItem(
+        500,
+        corpseItem.ID(), 
+        corpseItem.Name(), 
+        corpseItem.ItemLink('CLICKABLE')()
+    )
 end
 
 function Commands.masterLoot()
-    LootManager.multipleUseTable = {}
     LootManager.doLoot(true)
 end
 
@@ -1037,6 +1074,10 @@ print("INI file location: " .. Config.iniFile)
 -- Load configuration from INI
 INIManager.loadConfig()
 
+-- Initialize Actor System and register the handler
+ActorManager.initialize()
+ActorManager.setHandleShareItem(LootManager.handleSharedItem)
+
 mq.cmdf("/lootnodrop never")
 
 -- Register commands
@@ -1048,10 +1089,10 @@ mq.bind("/mlrc", INIManager.reloadConfig)
 mq.bind("/mlru", Commands.ReportUnlootedCorpses)
 mq.bind("/mlpm", LootManager.printMultipleUseItems)
 
--- Register events
+-- Register events (only for queueing items)
 mq.event('peerLootItem', "#*#mlqi #1# #2# #3#'", LootManager.queueItem)
-mq.event('shareLootItem', "#*#mlsi #1# #2# \"#3#\"'", LootManager.shareLootItem)
 mq.event('reportUnlooted', '#*#mlru#*#', Commands.ReportUnlootedCorpses)
+
 -- Register GUI
 ImGui.Register('masterLootGui', GUI.createGUI())
 
