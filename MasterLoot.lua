@@ -498,6 +498,16 @@ function CorpseManager.getCorpseTable(numCorpses)
     return corpseTable
 end
 
+function CorpseManager.getRandomCorpse(corpseTable)
+    if #corpseTable == 0 then
+        return nil, corpseTable
+    end
+    
+    local randomIndex = math.random(1, #corpseTable)
+    local randomCorpse = table.remove(corpseTable, randomIndex)
+    return randomCorpse, corpseTable
+end
+
 function CorpseManager.getNearestCorpse(corpseTable)
     if #corpseTable == 0 then
         return nil, corpseTable
@@ -679,6 +689,13 @@ function LootManager.addToMultipleUseTable(corpseObject, corpseItem)
 end
 
 function LootManager.lootQueuedItems()
+    -- Ensure myQueuedItems is initialized
+    if not LootManager.myQueuedItems then
+        LootManager.myQueuedItems = {}
+        print("No items in queue to loot")
+        return
+    end
+
     local idx, items = next(LootManager.myQueuedItems)
     
     while idx do
@@ -819,8 +836,9 @@ function LootManager.doLoot(isMaster)
     -- Main looting loop
     local corpseTable = CorpseManager.getCorpseTable(mq.TLO.SpawnCount("npccorpse radius 200 zradius 10")())
 
-    for i = 1, #corpseTable do
-        local currentCorpse = corpseTable[i]
+    while #corpseTable > 0 do
+        local currentCorpse
+        currentCorpse, corpseTable = CorpseManager.getRandomCorpse(corpseTable)
         
         if currentCorpse and not LootManager.isLooted(currentCorpse.ID) then
             Navigation.navigateToLocation(
@@ -1110,15 +1128,21 @@ local Commands = {}
 Commands.loopBoolean = true
 
 function Commands.testShared()
-    if mq.TLO.Cursor then
-        result = Utils.contains(Config.itemsToShare, mq.TLO.Cursor.Name())
-        print("Shared item status: "..tostring(result))
+    if mq.TLO.Cursor() then
+        local cursorName = mq.TLO.Cursor.Name()
+        if cursorName then
+            result = Utils.contains(Config.itemsToShare, cursorName)
+            print("Shared item status: "..tostring(result))
+        end
     end
 end
 
 function Commands.testItem()
-    if mq.TLO.Cursor then
-        result = ItemEvaluator.shouldLoot(mq.TLO.Cursor, true)
+    if mq.TLO.Cursor() then
+        local cursorName = mq.TLO.Cursor.Name()
+        if cursorName then
+            result = ItemEvaluator.shouldLoot(mq.TLO.Cursor, true)
+        end
     end
 end
 
