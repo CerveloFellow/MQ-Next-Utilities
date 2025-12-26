@@ -25,6 +25,35 @@ local ActorManager = {}
 ActorManager.actorMailbox = nil
 ActorManager.handleShareItem = nil
 
+-- ============================================================================
+-- Loot Manager Module (Declaration - moved up)
+-- ============================================================================
+local LootManager = {}
+LootManager.multipleUseTable = {}
+LootManager.myQueuedItems = {}
+LootManager.listboxSelectedOption = {}
+LootManager.lootedCorpses = {}
+
+function ActorManager.broadcastClearSharedList()
+    local groupSize = (mq.TLO.Group.GroupSize() or 0) - 1
+    
+    if groupSize >= 0 then
+        for i = 0, groupSize do
+            local memberName = mq.TLO.Group.Member(i).Name()
+            
+            if memberName and memberName ~= mq.TLO.Me.Name() then
+                local message = {
+                    type = 'clearSharedList'
+                }
+                
+                if ActorManager.actorMailbox then
+                    ActorManager.actorMailbox:send({to=memberName}, message)
+                end
+            end
+        end
+    end
+end
+
 function ActorManager.initialize()
     ActorManager.actorMailbox = actors.register('masterloot', function(message)
         local actualMessage = message
@@ -37,9 +66,16 @@ function ActorManager.initialize()
             end
         end
         
-        if type(actualMessage) == "table" and actualMessage.type == 'shareItem' then
-            if ActorManager.handleShareItem then
-                ActorManager.handleShareItem(actualMessage)
+        if type(actualMessage) == "table" then
+            if actualMessage.type == 'shareItem' then
+                if ActorManager.handleShareItem then
+                    ActorManager.handleShareItem(actualMessage)
+                end
+            elseif actualMessage.type == 'clearSharedList' then
+                -- Clear the local shared list
+                LootManager.multipleUseTable = {}
+                LootManager.listboxSelectedOption = {}
+                print(mq.TLO.Me.Name()..": Shared loot list cleared by group leader")
             end
         end
     end)
@@ -330,55 +366,110 @@ function ItemEvaluator.skipItem(corpseItem)
     end
 end
 
-function ItemEvaluator.shouldLoot(corpseItem)
-    -- Check if player can use the item
-
-    if Config.itemsToIgnore  and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
-        --print("Item to ignore - Skip"..corpseItem.Name())
+function ItemEvaluator.shouldLoot(corpseItem, debug)
+    debug = debug or false
+    
+    if debug then print("=== Evaluating item: " .. corpseItem.Name() .. " ===") end
+    
+    -- Check if it's a shared item
+    if Config.itemsToShare and Utils.contains(Config.itemsToShare, corpseItem.Name()) then
+        if debug then print("Item to share - Skip: " .. corpseItem.Name()) end
         return false
+    else
+        if debug then print("Item not in share list - Continue") end
+    end
+
+    -- Check if player can use the item
+    if Config.itemsToIgnore and Utils.contains(Config.itemsToIgnore, corpseItem.Name()) then
+        if debug then print("Item to ignore - Skip: " .. corpseItem.Name()) end
+        return false
+    else
+        if debug then print("Item not in ignore list - Continue") end
     end
 
     if corpseItem.CanUse() then
+        if debug then print("Player can use this item - Continue") end
+        
         -- Skip lore items we already own
         if corpseItem.Lore() and Utils.ownItem(corpseItem.Name()) then
-            --print("Lore Item and I own it - Skip")
+            if debug then print("Lore Item and I own it - Skip: " .. corpseItem.Name()) end
             return false
+        else
+            if debug then 
+                if corpseItem.Lore() then
+                    print("Lore item but don't own it - Continue")
+                else
+                    print("Not a lore item - Continue")
+                end
+            end
         end
         
         -- Skip No Drop/No Trade items multiple group members can use
         if (corpseItem.NoDrop() or corpseItem.NoTrade()) and 
            (ItemEvaluator.groupMembersCanUse(corpseItem) > 1) then
-            --print("Item is No Drop/No Trade and multiple group members can use, skipping.")
+            if debug then print("Item is No Drop/No Trade and multiple group members can use, skipping: " .. corpseItem.Name()) end
             mq.cmdf('/g ***' .. corpseItem.ItemLink('CLICKABLE')() .. '*** can be used by multiple classes')
             return false
+        else
+            if debug then 
+                if corpseItem.NoDrop() or corpseItem.NoTrade() then
+                    print("Item is No Drop/No Trade but only usable by this player - Continue")
+                else
+                    print("Item is tradeable - Continue")
+                end
+            end
         end
         
         -- Loot wearable items
-        for i = 1, corpseItem.WornSlots() do
-            --print("Item is worse slot item - Looting")
-            if corpseItem.WornSlot(i).ID() < 23 then
-                return true
+        if corpseItem.WornSlots() > 0 then
+            if debug then print("Item has " .. corpseItem.WornSlots() .. " worn slot(s) - Checking slots") end
+            for i = 1, corpseItem.WornSlots() do
+                if corpseItem.WornSlot(i).ID() < 23 then
+                    if debug then print("Item is wearable slot item (Slot ID: " .. corpseItem.WornSlot(i).ID() .. ") - Looting: " .. corpseItem.Name()) end
+                    return true
+                else
+                    if debug then print("Worn slot " .. i .. " ID (" .. corpseItem.WornSlot(i).ID() .. ") >= 23 - Continue") end
+                end
             end
+            if debug then print("No valid worn slots found - Continue") end
+        else
+            if debug then print("Item has no worn slots - Continue") end
         end
+    else
+        if debug then print("Player cannot use this item - Continue") end
     end
     
     -- Loot valuable items
     if (corpseItem.Value() or 0) > Config.lootSingleMinValue then
-        --print("Value greater than single item min value - Looting")
+        if debug then print("Value greater than single item min value - Looting: " .. corpseItem.Name() .. " (Value: " .. (corpseItem.Value() or 0) .. ", Min: " .. Config.lootSingleMinValue .. ")") end
         return true
+    else
+        if debug then print("Value (" .. (corpseItem.Value() or 0) .. ") not greater than min value (" .. Config.lootSingleMinValue .. ") - Continue") end
     end
     
     -- Loot valuable stackables
-    if corpseItem.Stackable() and (corpseItem.Value() or 0) >= Config.lootSingleMinValue then
-        --print("Value greater than stacked item min value - Looting")
-        return true
+    if corpseItem.Stackable() then
+        if debug then print("Item is stackable - Checking value") end
+        if (corpseItem.Value() or 0) >= Config.lootSingleMinValue then
+            if debug then print("Value greater than or equal to stacked item min value - Looting: " .. corpseItem.Name() .. " (Value: " .. (corpseItem.Value() or 0) .. ", Min: " .. Config.lootSingleMinValue .. ")") end
+            return true
+        else
+            if debug then print("Stackable value (" .. (corpseItem.Value() or 0) .. ") less than min value (" .. Config.lootSingleMinValue .. ") - Continue") end
+        end
+    else
+        if debug then print("Item is not stackable - Continue") end
     end
     
     -- Check items to keep list
     if Utils.contains(Config.itemsToKeep, corpseItem.Name()) then
+        if debug then print("Item in keep list - Looting: " .. corpseItem.Name()) end
         return true
+    else
+        if debug then print("Item not in keep list - Continue") end
     end
     
+    if debug then print("No matching criteria - Skip: " .. corpseItem.Name()) end
+    if debug then print("=== End evaluation ===") end
     return false
 end
 
@@ -428,15 +519,6 @@ function CorpseManager.getNearestCorpse(corpseTable)
     return nearest, corpseTable
 end
 
--- ============================================================================
--- Loot Manager Module
--- ============================================================================
-local LootManager = {}
-LootManager.multipleUseTable = {}
-LootManager.myQueuedItems = {}
-LootManager.listboxSelectedOption = {}
-LootManager.lootedCorpses = {}
-
 function LootManager.handleSharedItem(message)
     local item = {
         corpseId = message.corpseId,
@@ -473,10 +555,8 @@ end
 function LootManager.lootCorpse(corpseObject, isMaster)
     mq.cmdf("/target id %d", corpseObject.ID)
 
-    if((mq.TLO.Target.ID() or 0)==0) then
-        table.insert(LootManager.lootedCorpses, corpseObject.ID)
-        return
-    end
+    mq.delay(500)
+
     mq.cmdf("/loot")
     
     mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
@@ -488,7 +568,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
         while retryCount < maxRetries do
             mq.cmdf("/g Could not loot targeted corpse id(%d), retrying.", corpseObject.ID)
             mq.cmdf("/say #corpsefix")
-            mq.delay(500)
+            mq.delay(1000)
             --mq.cmdf("/warp t %d", corpseObject.ID)
             mq.cmdf("/warp loc %f %f %f", corpseObject.Y, corpseObject.X, corpseObject.Z)
             retryCount = retryCount + 1
@@ -504,6 +584,11 @@ function LootManager.lootCorpse(corpseObject, isMaster)
             mq.cmdf("/g Failed to loot corpse id(%d) after %d attempts.", corpseObject.ID, maxRetries)
             return
         end
+    end
+
+    if((mq.TLO.Target.ID() or 0)==0) then
+        table.insert(LootManager.lootedCorpses, corpseObject.ID)
+        return
     end
 
     local itemCount = tonumber(mq.TLO.Corpse.Items()) or 0
@@ -525,7 +610,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
         else
             if (ItemEvaluator.groupMembersCanUse(corpseItem) > 1 or isSharedItem) and (not ItemEvaluator.skipItem(corpseItem)) then
                 -- Show the item link in group chat
-                mq.cmdf("/g "..corpseItem.ItemLink('CLICKABLE')())
+                mq.cmdf("/g Shared Item: "..corpseItem.ItemLink('CLICKABLE')())
                 
                 -- Use actors to broadcast the item to all group members
                 ActorManager.broadcastShareItem(
@@ -548,7 +633,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
 end
 
 function LootManager.lootItem(corpseItem, slotIndex)
-    mq.cmdf('/g ' .. corpseItem.ItemLink('CLICKABLE')())
+    mq.cmdf('/g '..mq.TLO.Me.Name().." is looting ".. corpseItem.ItemLink('CLICKABLE')())
     mq.cmdf("/shift /itemnotify loot%d rightmouseup", slotIndex)
     mq.delay(300)
     
@@ -868,20 +953,35 @@ function GUI.renderActionButtons()
     end
 
     imgui.SameLine()
-    local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
-    if imgui.Button(warpLabel) then
-        Config.useWarp = not Config.useWarp
-        INIManager.saveSettings()
-        local mode = Config.useWarp and "WARP" or "NAV"
-        print("Navigation mode changed to: " .. mode)
-        mq.cmdf("/g Navigation mode: " .. mode)
+    -- local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
+    -- if imgui.Button(warpLabel) then
+    --     Config.useWarp = not Config.useWarp
+    --     INIManager.saveSettings()
+    --     local mode = Config.useWarp and "WARP" or "NAV"
+    --     print("Navigation mode changed to: " .. mode)
+    --     mq.cmdf("/g Navigation mode: " .. mode)
+    -- end
+    if imgui.Button("Everyone Loot") then
+        GUI.everyoneLoot()
     end
 
     imgui.SameLine()
     if imgui.Button("Clear Shared List") then
+        -- Clear locally
         LootManager.multipleUseTable = {}
+        LootManager.listboxSelectedOption = {}
+        
+        -- Broadcast to all group members
+        ActorManager.broadcastClearSharedList()
+        
+        mq.cmdf("/g Shared loot list cleared")
     end
     ImGui.SetWindowFontScale(1.0)
+end
+
+function GUI.everyoneLoot()
+    mq.cmdf("/dgga /say #corpsefix")
+    mq.cmdf("/dgga /mlml")
 end
 
 function GUI.executePeerLoot()
@@ -1009,6 +1109,53 @@ end
 local Commands = {}
 Commands.loopBoolean = true
 
+function Commands.testShared()
+    if mq.TLO.Cursor then
+        result = Utils.contains(Config.itemsToShare, mq.TLO.Cursor.Name())
+        print("Shared item status: "..tostring(result))
+    end
+end
+
+function Commands.testItem()
+    if mq.TLO.Cursor then
+        result = ItemEvaluator.shouldLoot(mq.TLO.Cursor, true)
+    end
+end
+
+function Commands.testCorpse()
+    -- Check if loot window is open
+    if not mq.TLO.Window("LootWnd").Open() then
+        print("ERROR: No corpse is open for looting. Please open a corpse first.")
+        mq.cmdf("/g No corpse is open for looting. Please open a corpse first.")
+        return
+    end
+    
+    local itemCount = tonumber(mq.TLO.Corpse.Items()) or 0
+    
+    if itemCount == 0 then
+        print("Corpse has no items.")
+        mq.cmdf("/g Corpse has no items.")
+        return
+    end
+    
+    print(string.format("=== Testing %d items on corpse ===", itemCount))
+    mq.cmdf("/g Testing %d items on corpse", itemCount)
+    
+    for i = 1, itemCount do
+        mq.delay("3s", function() return mq.TLO.Corpse.Item(i).ID() end)
+        local corpseItem = mq.TLO.Corpse.Item(i)
+        
+        if corpseItem and corpseItem.ID() then
+            print(string.format("\n--- Item %d/%d ---", i, itemCount))
+            local shouldLoot = ItemEvaluator.shouldLoot(corpseItem, true)
+            print(string.format("RESULT: %s", shouldLoot and "LOOT" or "SKIP"))
+        end
+    end
+    
+    print("=== Corpse test complete ===")
+    mq.cmdf("/g Corpse test complete")
+end
+
 function Commands.stopScript()
     Commands.loopBoolean = false
 end
@@ -1034,25 +1181,9 @@ function Commands.ReportUnlootedCorpses(line)
     end
     
     -- Print unlooted corpses
-    mq.cmdf("/g "..mq.TLO.Me.Name().." unlooted corpses: " .. #unlootedCorpses)
-end
-
-function Commands.testItem()
-    local corpseItem = mq.TLO.Cursor
-    
-    if not corpseItem or corpseItem.ID() == 0 then
-        print("No item on cursor!")
-        return
+    if (#unlootedCorpses > 0) then
+        mq.cmdf("/g "..mq.TLO.Me.Name().." unlooted corpses: " .. #unlootedCorpses)
     end
-
-    mq.cmdf('/g Testing: ' .. corpseItem.ItemLink('CLICKABLE')())
-    
-    ActorManager.broadcastShareItem(
-        500,
-        corpseItem.ID(), 
-        corpseItem.Name(), 
-        corpseItem.ItemLink('CLICKABLE')()
-    )
 end
 
 function Commands.masterLoot()
@@ -1085,6 +1216,8 @@ mq.bind("/mlml", Commands.masterLoot)
 mq.bind("/mlli", LootManager.lootQueuedItems)
 mq.bind("/mlsl", Commands.stopScript)
 mq.bind("/ti", Commands.testItem)
+mq.bind("/tcl", Commands.testCorpse)
+mq.bind("/tis", Commands.testShared)
 mq.bind("/mlrc", INIManager.reloadConfig)
 mq.bind("/mlru", Commands.ReportUnlootedCorpses)
 mq.bind("/mlpm", LootManager.printMultipleUseItems)
