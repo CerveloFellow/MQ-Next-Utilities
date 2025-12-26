@@ -170,7 +170,7 @@ function SpawnWatch.new()
 
         self.openGUI, self.shouldDrawGUI = ImGui.Begin(mq.TLO.Zone.Name(), self.openGUI )
     
-        if ImGui.ListBoxHeader("", self.ConfigurationSettings.WindowWidth, self.ConfigurationSettings.WindowHeight) then
+        if ImGui.BeginListBox("", self.ConfigurationSettings.WindowWidth, self.ConfigurationSettings.WindowHeight) then
             local lbSize = #self.SpawnTable
             for i=1,lbSize do
                 local ls = self.SpawnTable[i]
@@ -181,7 +181,7 @@ function SpawnWatch.new()
                     mq.cmdf("/target id %d", self.SpawnTable[self.CurrentIndex].ID())
                 end
             end
-            ImGui.ListBoxFooter()
+            ImGui.EndListBox()
         end
     
         if ImGui.Button("Reload") then
@@ -228,6 +228,7 @@ local args = {...}
 
 local instance = SpawnWatch.new()
 instance.getIniSettings()
+print(instance.iniFile)
 
 mq.bind("/spawnwatch", instance.spawnWatchBind)
 
