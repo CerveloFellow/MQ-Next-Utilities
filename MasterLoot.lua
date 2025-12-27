@@ -331,11 +331,19 @@ end
 local Navigation = {}
 
 function Navigation.navigateToLocation(x, y, z)
+    -- Validate coordinates before attempting navigation
+    if not x or not y or not z then
+        print("ERROR: Invalid coordinates - x:" .. tostring(x) .. " y:" .. tostring(y) .. " z:" .. tostring(z))
+        return false
+    end
+    
     if Config.useWarp then
         mq.cmdf("/warp loc %f %f %f", y, x, z)
     else
-        mq.cmdf("/squelch /nav  locxyz %d %d %d", x, y, z)
+        mq.cmdf("/squelch /nav locxyz %d %d %d", x, y, z)
     end
+    
+    return true
 end
 
 -- ============================================================================
@@ -483,16 +491,24 @@ function CorpseManager.getCorpseTable(numCorpses)
     
     for i = 1, numCorpses do
         local spawn = mq.TLO.NearestSpawn(i, "npccorpse radius 200 zradius 10")
-        local corpse = {
-            ID = spawn.ID(),
-            Name = spawn.Name(),
-            Distance = spawn.Distance(),
-            DistanceZ = spawn.DistanceZ(),
-            X = spawn.X(),
-            Y = spawn.Y(),
-            Z = spawn.Z()
-        }
-        table.insert(corpseTable, corpse)
+        
+        -- Validate spawn exists and has valid coordinates
+        if spawn and spawn.ID() and spawn.ID() > 0 then
+            local x, y, z = spawn.X(), spawn.Y(), spawn.Z()
+            
+            if x and y and z then
+                local corpse = {
+                    ID = spawn.ID(),
+                    Name = spawn.Name(),
+                    Distance = spawn.Distance(),
+                    DistanceZ = spawn.DistanceZ(),
+                    X = x,
+                    Y = y,
+                    Z = z
+                }
+                table.insert(corpseTable, corpse)
+            end
+        end
     end
     
     return corpseTable
@@ -841,18 +857,22 @@ function LootManager.doLoot(isMaster)
         currentCorpse, corpseTable = CorpseManager.getRandomCorpse(corpseTable)
         
         if currentCorpse and not LootManager.isLooted(currentCorpse.ID) then
-            Navigation.navigateToLocation(
+            local navSuccess = Navigation.navigateToLocation(
                 currentCorpse.X,
                 currentCorpse.Y,
                 currentCorpse.Z
             )
             
-            if Config.useWarp then
-                mq.delay(500)
+            if navSuccess then
+                if Config.useWarp then
+                    mq.delay(500)
+                else
+                    mq.delay("2s")
+                end
+                LootManager.lootCorpse(currentCorpse, isMaster)
             else
-                mq.delay("2s")
+                print("Failed to navigate to corpse ID: " .. currentCorpse.ID)
             end
-            LootManager.lootCorpse(currentCorpse, isMaster)
         end
     end
     
