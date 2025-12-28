@@ -372,6 +372,7 @@ function ItemEvaluator.skipItem(corpseItem)
         print("Item to ignore - Skip"..corpseItem.Name())
         return true
     end
+    return false  -- Add this line
 end
 
 function ItemEvaluator.shouldLoot(corpseItem, debug)
@@ -588,7 +589,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
     mq.delay("5s", function() return mq.TLO.Window("LootWnd").Open() end)
     
     local retryCount = 0
-    local maxRetries = 3
+    local maxRetries = 1
 
     if (not mq.TLO.Window("LootWnd").Open()) then
         while retryCount < maxRetries do
@@ -645,6 +646,12 @@ function LootManager.lootCorpse(corpseObject, isMaster)
                     corpseItem.Name(), 
                     corpseItem.ItemLink('CLICKABLE')()
                 )
+            else
+                print("------------------------------------------")
+                print(corpseItem.Name() or "nil")
+                print("Number of group members that can use: "..tostring(ItemEvaluator.groupMembersCanUse(corpseItem)))
+                print("Shared Item: "..tostring(isSharedItem))
+                print("Skip Item: "..tostring(ItemEvaluator.skipItem(corpseItem)))
             end
         end
         
@@ -958,8 +965,11 @@ function GUI.initializeDefaults()
     if GUI.radioSelectedOption == nil then
         GUI.radioSelectedOption = 0
         local firstMember = mq.TLO.Group.Member(0).Name()
-        if firstMember then
+        if firstMember and firstMember ~= "" then
             GUI.groupMemberSelected = firstMember
+        else
+            local myName = mq.TLO.Me.Name()
+            GUI.groupMemberSelected = myName or "Unknown"
         end
     end
     
@@ -1023,7 +1033,13 @@ function GUI.everyoneLoot()
 end
 
 function GUI.executePeerLoot()
-    if GUI.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
+    local myName = mq.TLO.Me.Name()
+    if not myName then
+        print("ERROR: Unable to get character name")
+        return
+    end
+    
+    if GUI.groupMemberSelected == myName then
         mq.cmdf("/say #corpsefix")
         mq.cmdf("/mlml")
     else
@@ -1059,7 +1075,13 @@ function GUI.executeQueueItem()
 end
 
 function GUI.executeLootItems()
-    if GUI.groupMemberSelected == tostring(mq.TLO.Me.Name()) then
+    local myName = mq.TLO.Me.Name()
+    if not myName then
+        print("ERROR: Unable to get character name")
+        return
+    end
+    
+    if GUI.groupMemberSelected == myName then
         mq.cmdf("/say #corpsefix")
         mq.cmdf("/mlli")
     else
