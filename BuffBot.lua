@@ -279,24 +279,33 @@ local function castSpell(buffName)
     mq.cmdf('/cast %d', targetGem)
     mq.delay(100)
     
-    -- Wait for casting to start
-    local maxWait = 50
+    -- Wait for casting to start (but don't fail if it's instant)
+    local maxWait = 20
+    local castingStarted = false
     while not mq.TLO.Me.Casting() and maxWait > 0 do
-        mq.delay(100)
+        mq.delay(50)
         maxWait = maxWait - 1
+        if mq.TLO.Me.Casting() then
+            castingStarted = true
+            break
+        end
     end
     
-    -- Wait for cast to complete
-    maxWait = 200
-    while mq.TLO.Me.Casting() and maxWait > 0 do
-        mq.delay(100)
-        maxWait = maxWait - 1
-    end
-    
-    -- Check if cast was successful (not interrupted)
-    if maxWait == 0 then
-        print("Cast timed out")
-        return false
+    -- If casting started, wait for it to complete
+    if castingStarted then
+        maxWait = 200
+        while mq.TLO.Me.Casting() and maxWait > 0 do
+            mq.delay(100)
+            maxWait = maxWait - 1
+        end
+        
+        if maxWait == 0 then
+            print("Cast timed out")
+            return false
+        end
+    else
+        -- Instant cast, just give it a moment
+        mq.delay(200)
     end
     
     print("Cast completed")
@@ -309,24 +318,33 @@ local function activateItem(itemName)
     mq.cmdf('/useitem "%s"', itemName)
     mq.delay(100)
     
-    -- Wait for casting to start
-    local maxWait = 50
+    -- Wait for casting to start (but don't fail if it's instant)
+    local maxWait = 20
+    local castingStarted = false
     while not mq.TLO.Me.Casting() and maxWait > 0 do
-        mq.delay(100)
+        mq.delay(50)
         maxWait = maxWait - 1
+        if mq.TLO.Me.Casting() then
+            castingStarted = true
+            break
+        end
     end
     
-    -- Wait for cast to complete
-    maxWait = 200
-    while mq.TLO.Me.Casting() and maxWait > 0 do
-        mq.delay(100)
-        maxWait = maxWait - 1
-    end
-    
-    -- Check if cast was successful
-    if maxWait == 0 then
-        print("Item activation timed out")
-        return false
+    -- If casting started, wait for it to complete
+    if castingStarted then
+        maxWait = 200
+        while mq.TLO.Me.Casting() and maxWait > 0 do
+            mq.delay(100)
+            maxWait = maxWait - 1
+        end
+        
+        if maxWait == 0 then
+            print("Item activation timed out")
+            return false
+        end
+    else
+        -- Instant cast, just give it a moment
+        mq.delay(200)
     end
     
     print("Item activation completed")
