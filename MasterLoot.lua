@@ -34,6 +34,43 @@ LootManager.myQueuedItems = {}
 LootManager.listboxSelectedOption = {}
 LootManager.lootedCorpses = {}
 
+-- ============================================================================
+-- Looting Status Tracking
+-- ============================================================================
+local LootingStatus = {}
+LootingStatus.activeLooters = {}  -- Table to track who is currently looting
+
+function LootingStatus.setLooting(characterName, isLooting)
+    LootingStatus.activeLooters[characterName] = isLooting
+end
+
+function LootingStatus.isLooting(characterName)
+    return LootingStatus.activeLooters[characterName] or false
+end
+
+function LootingStatus.broadcastStatus(isLooting)
+    local myName = mq.TLO.Me.Name()
+    local groupSize = (mq.TLO.Group.GroupSize() or 0) - 1
+    
+    if groupSize >= 0 then
+        for i = 0, groupSize do
+            local memberName = mq.TLO.Group.Member(i).Name()
+            
+            if memberName and memberName ~= myName then
+                local message = {
+                    type = 'lootingStatus',
+                    characterName = myName,
+                    isLooting = isLooting
+                }
+                
+                if ActorManager.actorMailbox then
+                    ActorManager.actorMailbox:send({to=memberName}, message)
+                end
+            end
+        end
+    end
+end
+
 function ActorManager.broadcastClearSharedList()
     local groupSize = (mq.TLO.Group.GroupSize() or 0) - 1
     
@@ -76,6 +113,9 @@ function ActorManager.initialize()
                 LootManager.multipleUseTable = {}
                 LootManager.listboxSelectedOption = {}
                 print(mq.TLO.Me.Name()..": Shared loot list cleared by group leader")
+            elseif actualMessage.type == 'lootingStatus' then
+                -- Update looting status for the character
+                LootingStatus.setLooting(actualMessage.characterName, actualMessage.isLooting)
             end
         end
     end)
@@ -372,7 +412,7 @@ function ItemEvaluator.skipItem(corpseItem)
         print("Item to ignore - Skip"..corpseItem.Name())
         return true
     end
-    return false  -- Add this line
+    return false
 end
 
 function ItemEvaluator.shouldLoot(corpseItem, debug)
@@ -637,7 +677,7 @@ function LootManager.lootCorpse(corpseObject, isMaster)
         else
             if (ItemEvaluator.groupMembersCanUse(corpseItem) > 1 or isSharedItem) and (not ItemEvaluator.skipItem(corpseItem)) then
                 -- Show the item link in group chat
-                mq.cmdf("/g Shared Item: "..corpseItem.ItemLink('CLICKABLE')())
+                mq.cmdf("/g Shared Item: ("..corpseItem.ID()..") "..corpseItem.ItemLink('CLICKABLE')())
                 
                 -- Use actors to broadcast the item to all group members
                 ActorManager.broadcastShareItem(
@@ -834,6 +874,12 @@ function LootManager.processQueuedItemsInCorpse(items, corpseItemCount)
 end
 
 function LootManager.doLoot(isMaster)
+    local myName = mq.TLO.Me.Name()
+    
+    -- Set looting status to true and broadcast
+    LootingStatus.setLooting(myName, true)
+    LootingStatus.broadcastStatus(true)
+    
     local startingLocation = {
         X = mq.TLO.Me.X(),
         Y = mq.TLO.Me.Y(),
@@ -847,7 +893,7 @@ function LootManager.doLoot(isMaster)
     LootManager.myQueuedItems = {}
     LootManager.listboxSelectedOption = {}
 
-    mq.cmdf("/g " .. mq.TLO.Me.Name() .. " has started looting")
+    mq.cmdf("/g " .. myName .. " has started looting")
     
     if mq.TLO.Stick.Active() then
         stickState = true
@@ -872,7 +918,7 @@ function LootManager.doLoot(isMaster)
             
             if navSuccess then
                 if Config.useWarp then
-                    mq.delay(500)
+                    mq.delay(250)
                 else
                     mq.delay("2s")
                 end
@@ -889,7 +935,11 @@ function LootManager.doLoot(isMaster)
     
     -- LootManager.printMultipleUseItems()
     
-    mq.cmdf("/g " .. mq.TLO.Me.Name() .. " is done Looting")
+    mq.cmdf("/g " .. myName .. " is done Looting")
+    
+    -- Set looting status to false and broadcast
+    LootingStatus.setLooting(myName, false)
+    LootingStatus.broadcastStatus(false)
 end
 
 function LootManager.queueItem(line, groupMemberName, corpseId, itemId)
@@ -1001,14 +1051,6 @@ function GUI.renderActionButtons()
     end
 
     imgui.SameLine()
-    -- local warpLabel = Config.useWarp and "Use Warp (ON)" or "Use Nav (OFF)"
-    -- if imgui.Button(warpLabel) then
-    --     Config.useWarp = not Config.useWarp
-    --     INIManager.saveSettings()
-    --     local mode = Config.useWarp and "WARP" or "NAV"
-    --     print("Navigation mode changed to: " .. mode)
-    --     mq.cmdf("/g Navigation mode: " .. mode)
-    -- end
     if imgui.Button("Everyone Loot") then
         GUI.everyoneLoot()
     end
@@ -1102,12 +1144,23 @@ function GUI.renderGroupMemberSelection()
             local memberName = mq.TLO.Group.Member(i).Name()
             local isActive = (GUI.radioSelectedOption == i)
             
+            -- Set color to red if looting, white if not
+            if LootingStatus.isLooting(memberName) then
+                imgui.PushStyleColor(ImGuiCol.Text, 1.0, 0.0, 0.0, 1.0)  -- Red
+            end
+            
             ImGui.SetWindowFontScale(0.7)
             if imgui.RadioButton(memberName, isActive) then
                 GUI.radioSelectedOption = i
                 GUI.groupMemberSelected = memberName
             end
             ImGui.SetWindowFontScale(1.0)
+            
+            -- Pop color if we pushed it
+            if LootingStatus.isLooting(memberName) then
+                imgui.PopStyleColor()
+            end
+            
             if i < groupSize then
                 imgui.SameLine()
             end
