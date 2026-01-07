@@ -230,6 +230,174 @@ local function IsTwoHandedWeapon(item)
     return false
 end
 
+-- Function to check if item is an augmentation
+local function IsAugmentation(item)
+    if not item then return false end
+    
+    local success, itemType = pcall(function() return item.Type() end)
+    if success and itemType then
+        return itemType == "Augmentation"
+    end
+    
+    return false
+end
+
+-- Function to check if augment type is compatible with slot type
+-- augType is a bitmask, slotType is the slot's accepted type number
+local function IsAugCompatible(augType, slotType)
+    if not augType or not slotType or slotType == 0 then
+        return false
+    end
+    
+    -- slotType is the type number (e.g., 7)
+    -- augType is the bitmask from the augment
+    -- Bit positions: Type 1 = bit 0, Type 2 = bit 1, etc.
+    local slotBit = bit32.lshift(1, slotType - 1)
+    return bit32.band(augType, slotBit) > 0
+end
+
+-- Function to convert augment type bitmask to readable string
+local function GetAugTypeString(augType)
+    if not augType or augType == 0 then
+        return "None"
+    end
+    
+    local types = {}
+    for i = 1, 25 do
+        -- Skip Type 20 - not a valid player-usable augment slot
+        if i ~= 20 then
+            local bit = bit32.lshift(1, i - 1)
+            if bit32.band(augType, bit) > 0 then
+                table.insert(types, tostring(i))
+            end
+        end
+    end
+    
+    if #types == 0 then
+        return "None"
+    end
+    
+    return table.concat(types, ", ")
+end
+
+-- Function to check if augment can be placed in a specific equipment slot
+local function CanAugGoInEquipSlot(augment, equipSlotID)
+    if not augment then return false end
+    
+    local wornSlots = augment.WornSlots()
+    if not wornSlots or wornSlots == 0 then
+        return false
+    end
+    
+    for i = 1, wornSlots do
+        local slotID = augment.WornSlot(i).ID()
+        if slotID == equipSlotID then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Function to evaluate augment against all equipped item augment slots
+local function EvaluateAugment(augment, weights)
+    local results = {}
+    
+    if not IsAugmentation(augment) then
+        return nil, "Item is not an augmentation"
+    end
+    
+    local augScore = CalculateScore(augment, weights)
+    
+    if not augment.CanUse() then
+        augScore = 0
+    end
+    
+    local augType = GetStatValue(augment, 'AugType')
+    
+    if augType == 0 then
+        return nil, "Could not determine augment type"
+    end
+    
+    -- Iterate through all equipped slots (0-22)
+    for slotID = 0, 22 do
+        local equippedItem = mq.TLO.Me.Inventory(slotID)
+        
+        if equippedItem and equippedItem.ID() then
+            -- First check if the augment can even go in this equipment slot
+            if CanAugGoInEquipSlot(augment, slotID) then
+                local itemName = equippedItem.Name()
+                local slotName = SLOT_NAMES[slotID] or string.format('Slot %d', slotID)
+                
+                -- Check each augment slot on this item (1-6)
+                for augSlotNum = 1, 6 do
+                    local augSlot = equippedItem.AugSlot(augSlotNum)
+                    
+                    if augSlot then
+                        local slotType = augSlot.Type()
+                        
+                        -- Skip Type 20 slots - these are not valid player-usable augment slots
+                        if slotType and slotType > 0 and slotType ~= 20 and IsAugCompatible(augType, slotType) then
+                            -- This slot is compatible, check what's in it
+                            local currentAugScore = 1  -- Default for empty slot
+                            local currentAugName = "Empty"
+                        
+                            -- Check if there's actually an augment in this slot
+                            -- Access augment via equippedItem.Item(slotNum) which returns the aug in that slot
+                            local hasAug = false
+                            local currentAug = nil
+                            
+                            -- Try to get the augment from the item's aug slot
+                            local success, aug = pcall(function() return equippedItem.Item(augSlotNum) end)
+                            
+                            if success and aug then
+                                local idSuccess, augID = pcall(function() return aug.ID() end)
+                                if idSuccess and augID and augID > 0 then
+                                    currentAug = aug
+                                    hasAug = true
+                                end
+                            end
+                        
+                            if hasAug and currentAug then
+                                local success, name = pcall(function() return currentAug.Name() end)
+                                if success and name then
+                                    currentAugName = name
+                                end
+                            
+                                local canUseSuccess, canUse = pcall(function() return currentAug.CanUse() end)
+                                if canUseSuccess and canUse then
+                                    currentAugScore = CalculateScore(currentAug, weights)
+                                end
+                                -- If current aug scores 0, treat as 1 to avoid division issues
+                                if currentAugScore <= 0 then
+                                    currentAugScore = 1
+                                end
+                            end
+                        
+                        local improvement = ((augScore - currentAugScore) / currentAugScore) * 100
+                        
+                        table.insert(results, {
+                            equipSlotID = slotID,
+                            equipSlotName = slotName,
+                            equipItemName = itemName,
+                            augSlotNum = augSlotNum,
+                            augSlotType = slotType,
+                            currentAugName = currentAugName,
+                            currentAugScore = currentAugScore,
+                            newAugScore = augScore,
+                            improvement = improvement,
+                            isUpgrade = augScore > currentAugScore
+                        })
+                    end
+                end
+            end
+            end
+        end
+    end
+    
+    return results
+end
+
 -- Function to evaluate item against equipped items
 local function EvaluateItem(item, weights)
     local results = {}
@@ -399,6 +567,7 @@ local function FindUpgrades(args)
     
     local upgradesList = {}
     local itemsScanned = 0
+    local augmentsScanned = 0
     
     for _, bagNum in ipairs(bagList) do
         local slotNum = bagNum + 22
@@ -411,9 +580,41 @@ local function FindUpgrades(args)
                 local item = mq.TLO.Me.Inventory(slotNum).Item(slot)
                 
                 if item() and item.ID() then
-                    itemsScanned = itemsScanned + 1
-                    
-                    if IsWearable(item) then
+                    -- Check if it's an augment or a regular item
+                    if IsAugmentation(item) then
+                        augmentsScanned = augmentsScanned + 1
+                        
+                        local results = EvaluateAugment(item, weights)
+                        
+                        if results and #results > 0 then
+                            -- Find the best upgrade slot for this augment
+                            local bestUpgrade = nil
+                            for _, result in ipairs(results) do
+                                if result.isUpgrade then
+                                    if not bestUpgrade or result.improvement > bestUpgrade.improvement then
+                                        bestUpgrade = result
+                                    end
+                                end
+                            end
+                            
+                            if bestUpgrade then
+                                -- Format slot name as "EquipSlot - Aug Slot #"
+                                local augSlotName = string.format('%s - Aug %d', 
+                                    bestUpgrade.equipSlotName, bestUpgrade.augSlotNum)
+                                
+                                table.insert(upgradesList, {
+                                    itemName = item.Name(),
+                                    slotName = augSlotName,
+                                    improvement = bestUpgrade.improvement,
+                                    bagNum = bagNum,
+                                    slotNum = slot,
+                                    isAugment = true
+                                })
+                            end
+                        end
+                    elseif IsWearable(item) then
+                        itemsScanned = itemsScanned + 1
+                        
                         local results = EvaluateItem(item, weights)
                         
                         if results and #results > 0 then
@@ -431,7 +632,8 @@ local function FindUpgrades(args)
                                     slotName = bestUpgrade.slotName,
                                     improvement = bestUpgrade.improvement,
                                     bagNum = bagNum,
-                                    slotNum = slot
+                                    slotNum = slot,
+                                    isAugment = false
                                 })
                             end
                         end
@@ -441,7 +643,7 @@ local function FindUpgrades(args)
         end
     end
     
-    print(string.format('Scanned %d items in %d bag(s)', itemsScanned, #bagList))
+    print(string.format('Scanned %d items, %d augments in %d bag(s)', itemsScanned, augmentsScanned, #bagList))
     print('========================================')
     
     if #upgradesList == 0 then
@@ -629,9 +831,125 @@ local function ItemScore()
     print('========================================')
 end
 
+-- Augment Score function for DisplayItem
+local function AugmentScore()
+    print('Scanning for open DisplayItem window...')
+    
+    local displayItem = nil
+    local displayIndex = -1
+    
+    for i = 0, 10 do
+        local item = mq.TLO.DisplayItem(i)
+        if item and item.ID() then
+            displayItem = item
+            displayIndex = i
+            break
+        end
+    end
+    
+    if not displayItem then
+        print(RED .. 'ERROR: No DisplayItem window found.' .. WHITE)
+        print('1. Right-click and inspect an augmentation')
+        print('2. Run: /augmentcompare')
+        return
+    end
+    
+    -- Check if it's an augmentation
+    if not IsAugmentation(displayItem) then
+        print(RED .. 'ERROR: Item is not an augmentation.' .. WHITE)
+        print('The item in the DisplayItem window must be an augmentation.')
+        print('Use /itemscore for regular equipment.')
+        return
+    end
+    
+    local playerClass = mq.TLO.Me.Class.Name()
+    local weights = CLASS_WEIGHTS[playerClass] or CLASS_WEIGHTS.Default
+    
+    local augName = displayItem.Name()
+    local augType = GetStatValue(displayItem, 'AugType')
+    local augTypeStr = GetAugTypeString(augType)
+    
+    print('========================================')
+    print(string.format('Augment Score Analysis for %s%s%s', YELLOW, playerClass, WHITE))
+    print('========================================')
+    print('Evaluating: ' .. CYAN .. augName .. WHITE)
+    
+    local augScore = CalculateScore(displayItem, weights)
+    
+    if not displayItem.CanUse() then
+        augScore = 0
+    end
+    
+    print(string.format('Augment Score: %s%.1f%s', GREEN, augScore, WHITE))
+    print(string.format('Augment Type: %s%s%s', YELLOW, augTypeStr, WHITE))
+    
+    local results, errorMsg = EvaluateAugment(displayItem, weights)
+    
+    if not results then
+        print(RED .. errorMsg .. WHITE)
+        return
+    end
+    
+    if #results == 0 then
+        print(YELLOW .. 'No compatible augment slots found on equipped items.' .. WHITE)
+        print('========================================')
+        return
+    end
+    
+    -- Separate upgrades from non-upgrades
+    local upgrades = {}
+    local nonUpgrades = {}
+    
+    for _, result in ipairs(results) do
+        if result.isUpgrade then
+            table.insert(upgrades, result)
+        else
+            table.insert(nonUpgrades, result)
+        end
+    end
+    
+    if #upgrades == 0 then
+        print(YELLOW .. 'This augment is not an upgrade for any compatible slot.' .. WHITE)
+    else
+        -- Sort upgrades by improvement (descending)
+        table.sort(upgrades, function(a, b) return a.improvement > b.improvement end)
+        
+        -- Report only the best upgrade
+        local best = upgrades[1]
+        
+        local improvementStr = ''
+        if best.currentAugName == "Empty" then
+            improvementStr = string.format('%s(NEW - empty slot, +%.1f%%)%s', GREEN, best.improvement, WHITE)
+        else
+            improvementStr = string.format('%s(+%.1f%%)%s', GREEN, best.improvement, WHITE)
+        end
+        
+        print('')
+        print(GREEN .. 'BEST UPGRADE FOUND:' .. WHITE)
+        print(string.format('  %s%s%s - Augment Slot %d (Type %d)',
+            CYAN, best.equipSlotName, WHITE, best.augSlotNum, best.augSlotType))
+        print(string.format('    Item: %s', best.equipItemName))
+        print(string.format('    Current: %s (Score: %.1f)', best.currentAugName, best.currentAugScore))
+        print(string.format('    New:     %s%s%s (Score: %.1f) %s',
+            CYAN, augName, WHITE, best.newAugScore, improvementStr))
+        
+        -- If there are other upgrade slots, mention them
+        if #upgrades > 1 then
+            print('')
+            print(string.format('%sOther upgrade slots available: %d%s', YELLOW, #upgrades - 1, WHITE))
+        end
+    end
+    
+    print('========================================')
+end
+
 -- Bind Commands
 mq.bind('/itemscore', function()
     ItemScore()
+end)
+
+mq.bind('/augmentscore', function()
+    AugmentScore()
 end)
 
 mq.bind('/findupgrades', function(args)
@@ -644,6 +962,7 @@ print('\agItemScore Script Loaded')
 print('\ag========================================')
 print('\awCommands:')
 print('\aw  /itemscore - Evaluate item in DisplayItem window')
+print('\aw  /augmentscore - Compare augment in DisplayItem window')
 print('\aw  /findupgrades - Scan all bags for upgrades')
 print('\aw  /findupgrades # - Scan specific bag (1-10)')
 print('\aw  /findupgrades #-# - Scan bag range (e.g., 2-4)')
