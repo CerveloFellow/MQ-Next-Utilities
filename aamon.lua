@@ -10,7 +10,7 @@
 local mq = require('mq')
 
 -- Configuration
-local CHECK_INTERVAL_SECONDS = 300
+local CHECK_INTERVAL_SECONDS = 30
 local DELAY_AFTER_BUTTON_CLICK = 200
 local DELAY_AFTER_WINDOW_OPEN = 500
 
@@ -31,6 +31,7 @@ local BUSY_WINDOWS = {
     "TradeWnd",         -- Trading with player
     "GiveWnd",          -- Giving item to NPC
     "InventoryWindow",  -- Inventory open
+    "BazaarSearchWnd",  -- Bazaar search
 }
 
 -- Function to check if player is "active" and should not be interrupted
@@ -195,7 +196,7 @@ local function main()
     print("  - Casting")
     print("  - Moving or navigating")
     print("  - Item on cursor")
-    print("  - Busy windows open (merchant, bank, loot, etc)")
+    print("  - Busy windows open (merchant, bank, loot, bazaar, etc)")
     print("===========================================")
     
     while running do
